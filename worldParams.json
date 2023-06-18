@@ -1,0 +1,35 @@
+{
+    "roughness" : 0.06,
+    "forestation" : 0.6,
+    "hydration" : 0.05,
+
+    "alts" : {
+      "deepsea": "deepsea",
+      "deepseaLevel": 30,
+      "sea": "sea",
+      "seaLevel": 60,
+      "lowlands": "lowlands",
+      "lowlandsLevel": 75,
+      "highlands": "highlands",
+      "highlandsLevel": 90,
+      "mountains": "mountains"
+    },
+    "wets" : {
+      "desert": "desert",
+      "desertLevel": 35,
+      "dry": "dry",
+      "dryLevel": 75,
+      "wet": "wet"
+    },
+    "temps" : {
+      "frozen": "frozen",
+      "frozenLevel": 20,
+      "cold": "cold",
+      "coldLevel": 35,
+      "mild": "mild",
+      "mildLevel": 60,
+      "warm": "warm",
+      "warmLevel": 75,
+      "hot": "hot"
+    }
+}
