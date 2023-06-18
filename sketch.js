@@ -18,7 +18,7 @@ function preload() {
 function setup() {
   let cnv = createCanvas(400, 400);
   cnv.parent("main");
-  document.getElementById("defaultCanvas0").oncontextmenu = (e) => false;
+  document.getElementById("defaultCanvas0").oncontextmenu = (e) => false; //disables right click menu
 
   debug = createCheckbox("Debug", false);
   debug.parent("main");
