@@ -1,5 +1,6 @@
 //can a simple web based 4x game be made that's finishable in 44 minutes? Let's call that 50 'turns'
 let debug;
+let radio;
 let debugData = {};
 
 let board;
@@ -22,6 +23,14 @@ function setup() {
   debug = createCheckbox("Debug", false);
   debug.parent("main");
 
+  radio = createRadio();
+  radio.option('geo');
+  radio.selected("geo");
+  radio.option('water');
+  radio.option('temp');
+  radio.option('height');
+  radio.parent("main");
+
   worldGenerator = new WorldGenerator(worldParams);
   board = new Board(BOARDSIZE);
   resetBoard();
@@ -32,6 +41,7 @@ function draw() {
   background(120, 255, 120);
 
   //draw grid
+  screen.mode = radio.value();
   screen.draw(board.grid);
 
   if (debug.checked()) {

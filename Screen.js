@@ -73,6 +73,16 @@ class Screen {
         if (tile.alt == "mountains") return rock;
         
         if(tile.wet == "desert") return sand;
+        break;
+      case "water":
+        return color(30,60,2.55 * tile.wetVal);
+
+      case "height" :
+        return color(2.55*tile.altVal);
+
+      case "temp" :
+        return color(2.55*tile.tempVal, 2.55*tile.tempVal, 120);
+
     }
     return grass;
   }
