@@ -37,7 +37,7 @@ class Board {
 //responsible for how the world is generated, constuctor takes in parameters used to tweak generation
 class WorldGenerator {
   constructor(params) {
-    this.noiseProfiles = [random(100), random(100), random(100)];
+    this.noiseProfiles = [Math.random(100), Math.random(100), Math.random(100)];
     Object.keys(params).forEach(k => {
       this[k] = params[k];
     });
@@ -128,11 +128,11 @@ class WorldGenerator {
 
     //set water tiles
     if (tile.alt == "deepsea" || tile.alt == "sea") tile.water = "saltwater";
-    else if ((tile.wet == "desert") & (random() < this.hydration / 4))
+    else if ((tile.wet == "desert") & (Math.random() < this.hydration / 4))
       tile.water = "freshwater";
-    else if ((tile.wet == "dry") & (random() < this.hydration / 2))
+    else if ((tile.wet == "dry") & (Math.random() < this.hydration / 2))
       tile.water = "freshwater";
-    else if ((tile.wet == "wet") & (random() < this.hydratrion))
+    else if ((tile.wet == "wet") & (Math.random() < this.hydratrion))
       tile.water = "freshwater";
 
     //set forestation
@@ -140,7 +140,7 @@ class WorldGenerator {
       tile.water == false &&
       tile.alt !== "mountain" &&
       tile.wet !== "desert" &&
-      random() < this.forestation
+      Math.random() < this.forestation
     ) {
       if (tile.temp !== "frozen" && tile.temp !== "hot") tile.forest = "forest";
       else if (tile.temp == "hot") tile.forest = "jungle";
