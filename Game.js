@@ -17,6 +17,7 @@ class Tile {
     this.water = false;
     this.forest = false;
     this.coastal = false;
+    this.active = true;
   }
 
   underMouse(mouseXCoord, mouseYCoord) {
@@ -37,7 +38,7 @@ class Board {
 //responsible for how the world is generated, constuctor takes in parameters used to tweak generation
 class WorldGenerator {
   constructor(params) {
-    this.noiseProfiles = [Math.random(100), Math.random(100), Math.random(100)];
+    this.noiseProfiles = [Math.random() * 100, Math.random() * 100, Math.random() * 100];
     Object.keys(params).forEach(k => {
       this[k] = params[k];
     });
@@ -91,8 +92,11 @@ class WorldGenerator {
   genNewTile(i, j) {
     let tile = new Tile(i, j);
 
+    //altitude
     noiseSeed(this.noiseProfiles[0]);
-    let alt = floor(noise(i * this.roughness, j * this.roughness) * 100);
+    let altNoise = Math.floor(noise(i * this.roughness, j * this.roughness) * 50)
+    let altIslandBias = Math.floor(50 - (50 / (BOARDSIZE / 2)) * Math.sqrt(((i - BOARDSIZE / 2) * (i - BOARDSIZE / 2) + (j - BOARDSIZE / 2) * (j - BOARDSIZE / 2) + 1)));
+    let alt = altNoise + altIslandBias;
     tile.altVal = alt;
     if (alt < this.alts.deepseaLevel) tile.alt = this.alts.deepsea;
     else if (alt < this.alts.seaLevel) tile.alt = this.alts.sea;
@@ -100,6 +104,7 @@ class WorldGenerator {
     else if (alt < this.alts.highlandsLevel) tile.alt = this.alts.highlands;
     else tile.alt = this.alts.mountains;
 
+    //wetness
     noiseSeed(this.noiseProfiles[1]);
     //made water distribution have less roughness than land because seems right
     let wet = alt < this.alts.seaLevel ? 100 : floor(
@@ -110,6 +115,8 @@ class WorldGenerator {
     else if (wet < this.wets.dryLevel) tile.wet = this.wets.dry;
     else tile.wet = this.wets.wet;
 
+    //temperature
+
     //temperature should vary primarily by latitude
     //a quadratic distribution for temps so midrange tiles are hottest and top and bottom are coldest,
     //no matter the range of j's, but always between 0 and 50
@@ -117,8 +124,8 @@ class WorldGenerator {
 
     noiseSeed(this.noiseProfiles[2]);
     let temp =
-    floor(-(200 / (BOARDSIZE * BOARDSIZE)) * (j - BOARDSIZE) * j +
-      noise(i * this.roughness, j * this.roughness) * 50);
+      floor(-(200 / (BOARDSIZE * BOARDSIZE)) * (j - BOARDSIZE) * j +
+        noise(i * this.roughness, j * this.roughness) * 50);
     tile.tempVal = temp;
     if (temp < this.temps.frozenLevel) tile.temp = this.temps.frozen;
     else if (temp < this.temps.coldLevel) tile.temp = this.temps.cold;
@@ -151,4 +158,23 @@ class WorldGenerator {
 }
 
 //object responsible for game rules
-class Engine { }
+class Engine {
+  setActiveTiles(grid, mx, my) {
+    //set all tiles to inactive initially
+    for (let i = 0; i < BOARDSIZE; i++) {
+      for (let j = 0; j < BOARDSIZE; j++) {
+        grid[i][j].active = grid[i][j].underMouse(mx, my) ||
+          grid[i][j].underMouse(mx+1, my) ||
+          grid[i][j].underMouse(mx+1, my+1) ||
+          grid[i][j].underMouse(mx, my+1) ||
+          grid[i][j].underMouse(mx-1, my) ||
+          grid[i][j].underMouse(mx, my-1) ||
+          grid[i][j].underMouse(mx-1, my-1) ||
+          grid[i][j].underMouse(mx+1, my-1) ||
+          grid[i][j].underMouse(mx-1, my+1);
+      }
+    }
+
+    //other events may set tiles to active, i/e to re-render
+  }
+}

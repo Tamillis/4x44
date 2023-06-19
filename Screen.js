@@ -16,13 +16,26 @@ class Screen {
   }
 
   draw(grid) {
-    //draw the cells currently on screen
+    //draw the cells passed in via the 2D grid
+
     textAlign(CENTER, CENTER);
+    strokeWeight(1);
+
+    //draw the entire screen
     for (let i = 0; i < width / this.scale; i++) {
       for (let j = 0; j < height / this.scale; j++) {
         //don't try to render cells that don't exist
-        if (i + this.x >= this.dims || i + this.x < 0) continue;
-        if (j + this.y >= this.dims || j + this.y < 0) continue;
+        if ((i + this.x >= this.dims || i + this.x < 0) ||
+          (j + this.y >= this.dims || j + this.y < 0)) {
+          push();
+          noStroke();
+          fill(255, 200, 200);
+          rect(i * this.scale, j * this.scale, this.scale, this.scale);
+          pop();
+          continue;
+        }
+
+        if (!grid[i + this.x][j + this.y].active) continue;
 
         //get cell to render
         let cell = grid[i + this.x][j + this.y];
@@ -53,35 +66,35 @@ class Screen {
     const snow = "#fffafa";
     const jungle = "#29ab46";
 
-    switch(this.mode) {
-      case "geo" :
+    switch (this.mode) {
+      case "geo":
         if (tile.temp == "frozen") return ice;
         if (tile.alt == "sea") return ocean;
         if (tile.alt == "deepsea") return deepocean;
-    
+
         if (tile.water == "freshwater") return river;
-    
+
         if (tile.forest == "forest") return woods;
         if (tile.forest == "jungle") return jungle;
-    
+
         if (tile.coastal == "coast") return sand;
         if (tile.coastal == "cliffs") return rock;
-    
+
         if (tile.temp == "cold") return snow;
-        
+
         if (tile.alt == "highlands") return hills;
         if (tile.alt == "mountains") return rock;
-        
-        if(tile.wet == "desert") return sand;
+
+        if (tile.wet == "desert") return sand;
         break;
       case "water":
-        return color(30,60,2.55 * tile.wetVal);
+        return color(30, 60, 2.55 * tile.wetVal);
 
-      case "height" :
-        return color(2.55*tile.altVal);
+      case "height":
+        return color(2.55 * tile.altVal);
 
-      case "temp" :
-        return color(2.55*tile.tempVal, 2.55*tile.tempVal, 120);
+      case "temp":
+        return color(2.55 * tile.tempVal, 2.55 * tile.tempVal, 120);
 
     }
     return grass;
@@ -103,20 +116,20 @@ class Screen {
   adjustScale(step) {
     //don't if at either end of the scales array
     if (this.scaleStep + step >= this.scales.length || this.scaleStep + step < 0) return;
-    
+
     //translate
     let { x, y } = this.pxToBoardCoords(mouseX, mouseY);
     this.x = x;
     this.y = y;
-    
+
     //zoom
     this.scaleStep += step;
     this.scale = this.scales[this.scaleStep];
-    
+
     //adjust
     this.x -= floor(width / this.scale / 2);
     this.y -= floor(height / this.scale / 2);
-    
+
     this.border = this.scale * 4;
   }
 

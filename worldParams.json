@@ -7,11 +7,11 @@
       "deepsea": "deepsea",
       "deepseaLevel": 30,
       "sea": "sea",
-      "seaLevel": 50,
+      "seaLevel": 40,
       "lowlands": "lowlands",
-      "lowlandsLevel": 75,
+      "lowlandsLevel": 65,
       "highlands": "highlands",
-      "highlandsLevel": 90,
+      "highlandsLevel": 75,
       "mountains": "mountains"
     },
     "wets" : {

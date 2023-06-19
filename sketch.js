@@ -5,20 +5,23 @@ let debugData = {};
 
 let board;
 let screen;
+let engine;
 let worldGenerator;
 let worldParams;
 
-const BOARDSIZE = 40;
-const BOARDSCALES = [10,25,50,100];
+const BOARDSIZE = 100;
+const BOARDSCALES = [5, 10, 25, 50, 100];
 
 function preload() {
   worldParams = loadJSON("./worldParams.json");
 }
 
 function setup() {
-  let cnv = createCanvas(400, 400);
+  let cnv = createCanvas(BOARDSIZE * 6, BOARDSIZE * 6);
   cnv.parent("main");
   document.getElementById("defaultCanvas0").oncontextmenu = (e) => false; //disables right click menu
+
+  frameRate(120);
 
   debug = createCheckbox("Debug", false);
   debug.parent("main");
@@ -34,11 +37,20 @@ function setup() {
   worldGenerator = new WorldGenerator(worldParams);
   board = new Board(BOARDSIZE);
   resetBoard();
+
   screen = new Screen(BOARDSCALES, BOARDSIZE);
+  screen.draw(board.grid);
+
+  engine = new Engine();
 }
 
 function draw() {
-  background(120, 255, 120);
+  document.getElementById("framerate").innerHTML = Math.floor(frameRate());
+
+  //background(120, 255, 120);
+
+  let mouseCoords = screen.pxToBoardCoords(mouseX, mouseY);
+  engine.setActiveTiles(board.grid, mouseCoords.x, mouseCoords.y);
 
   //draw grid
   screen.mode = radio.value();
@@ -82,16 +94,37 @@ function drawDebugBox() {
 
 function keyPressed() {
   if (key == "r") resetBoard();
-  else screen.keyPressed();
+  else if ([LEFT_ARROW, UP_ARROW, DOWN_ARROW, RIGHT_ARROW].includes(keyCode) || ["+", "-"].includes(key)) {
+    screen.keyPressed();
+    rerenderBoard();
+  }
+
+
 }
 
 function mousePressed(e) {
   if (mouseX < 0 || mouseX > width || mouseY < 0 || mouseY > height) return;
-  else if (mouseButton === RIGHT) resetBoard();
-  else screen.mousePressed(board.grid);
+  else if (mouseButton === RIGHT) {
+    resetBoard();
+    rerenderBoard();
+  }
+  else {
+    screen.mousePressed(board.grid);
+    //set all tiles to active to rerender them.
+    rerenderBoard()
+  }
 }
 
 function resetBoard() {
   worldGenerator = new WorldGenerator(worldParams);
   board.grid = worldGenerator.genGrid(board.grid);
+}
+
+function rerenderBoard() {
+  for (let i = 0; i < BOARDSIZE; i++) {
+    for (let j = 0; j < BOARDSIZE; j++) {
+      board.grid[i][j].active = true;
+    }
+  }
+  screen.draw(board.grid);
 }
