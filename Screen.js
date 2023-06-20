@@ -92,7 +92,11 @@ class Screen {
         if (tile.coastal == "coast") return sand;
         if (tile.coastal == "cliffs") return rock;
 
-        if (tile.alt == "highlands") return hills;
+        if (tile.alt == "highlands") {
+          if (tile.wet == "desert") return hills;
+          if (tile.temp == "cold") return snow;
+          return hills;
+        }
 
         if (tile.wet == "desert") return sand;
 
@@ -107,7 +111,24 @@ class Screen {
 
       case "temp":
         return color(2.55 * tile.tempVal, 2.55 * tile.tempVal, 120);
+      
+      case "region":
+        switch(tile.region) {
+          case 1:
+            return ocean;
+          case 2:
+            return sand;
+          case 3:
+            return grass;
+          case 4:
+            return snow;
+          case 5:
+            return rock;
+          case 6:
+            return river;
+        }
 
+        break;
     }
     return grass;
   }
@@ -150,8 +171,8 @@ class Screen {
       //left mouse button for movement. Centre tile
 
       let { x, y } = this.pxToBoardCoords(mouseX, mouseY);
-      this.x = x - floor(width / 2 / this.scale);
-      this.y = y - floor(height / 2 / this.scale);
+      this.x = x - Math.floor(width / 2 / this.scale);
+      this.y = y - Math.floor(height / 2 / this.scale);
     }
     this.checkBounds();
   }
@@ -161,8 +182,8 @@ class Screen {
     let y = this.y * this.scale;
 
     //if the game bord in px + 2 * border is less than the width or height, instead centre the screen
-    let maxBoardLength = BOARDSIZE * this.scale + this.border * 2;
-    console.log(maxBoardLength, width)
+    let maxBoardLength = BOARDSIZE * this.scale;
+
     if (maxBoardLength < width || maxBoardLength < height) {
       this.x = -Math.floor(((width - maxBoardLength) / 2) / this.scale);
       this.y = -Math.floor(((height - maxBoardLength) / 2) / this.scale);

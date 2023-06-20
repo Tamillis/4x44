@@ -2,6 +2,7 @@
     "roughness" : 0.06,
     "forestation" : 0.6,
     "hydration" : 0.05,
+    "regions" : 6,
 
     "alts" : {
       "deepsea": "deepsea",

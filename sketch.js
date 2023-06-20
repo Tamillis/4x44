@@ -1,5 +1,6 @@
 //can a simple web based 4x game be made that's finishable in 44 minutes? Let's call that 50 'turns'
 let debugData = {};
+let debug = false;
 
 let board;
 let screen;
@@ -8,7 +9,7 @@ let worldGenerator;
 let worldParams;
 
 const BOARDSIZE = 100;
-const SCREENSIZE = 500;
+const SCREENSIZE = 600;
 const BOARDSCALES = [5, 10, 25, 50, 100];
 
 function preload() {
@@ -30,6 +31,7 @@ function setup() {
   resetBoard();
 
   screen = new Screen(BOARDSCALES, BOARDSIZE);
+  screen.checkBounds();
   screen.draw(board.grid);
 
   engine = new Engine();
@@ -43,8 +45,9 @@ function draw() {
 
   //draw grid
   screen.draw(board.grid);
+  debug = document.getElementById("debug").checked;
 
-  if (document.getElementById("debug").checked) {
+  if (debug) {
     loadDebugData();
     drawDebugBox();
   }
@@ -64,19 +67,37 @@ function loadDebugData() {
   debugData.water = board.grid[x][y].water;
   debugData.forest = board.grid[x][y].forest;
   debugData.coastal = board.grid[x][y].coastal;
+  debugData.region = board.grid[x][y].region;
 }
 
 function drawDebugBox() {
   push();
+
+  //basic debug info for mouse tile
   textAlign(LEFT, CENTER);
   fill(255);
   strokeWeight(1);
-  rect(15, 15, width / 2 - 15, Object.keys(debugData).length * 18);
+  rect(15, 15, width / 4 + 30, Object.keys(debugData).length * 18);
   fill(0);
   strokeWeight(2);
   Object.keys(debugData).forEach((k, i) => {
     text(k + " : " + debugData[k], 25, 25 + i * 18);
   });
+
+  //wind indicator crosshair
+  let crosshair = { x: width / 4, y: 15 + Object.keys(debugData).length * 18 / 2};
+  textAlign(CENTER, CENTER);
+  noStroke(1);
+  text("Wind:", crosshair.x, crosshair.y - 40);
+
+  strokeWeight(2);
+  stroke(0);
+  line(crosshair.x - 15*2, crosshair.y, crosshair.x + 15*2, crosshair.y);
+  line(crosshair.x, crosshair.y - 15*2, crosshair.x, crosshair.y + 15*2);
+  
+  strokeWeight(4);
+  stroke("#AAA");
+  line(crosshair.x, crosshair.y, 0.3*board.wind.x + crosshair.x, 0.3*board.wind.y + crosshair.y);
   pop();
 }
 
@@ -106,6 +127,7 @@ function mousePressed(e) {
 function resetBoard() {
   worldGenerator = new WorldGenerator(worldParams);
   board.grid = worldGenerator.genGrid(board.grid);
+  board.wind = worldGenerator.getVectorForce(100, 50);
 }
 
 function rerenderBoard() {
