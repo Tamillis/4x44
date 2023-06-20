@@ -1,6 +1,4 @@
 //can a simple web based 4x game be made that's finishable in 44 minutes? Let's call that 50 'turns'
-let debug;
-let radio;
 let debugData = {};
 
 let board;
@@ -10,29 +8,22 @@ let worldGenerator;
 let worldParams;
 
 const BOARDSIZE = 100;
+const SCREENSIZE = 500;
 const BOARDSCALES = [5, 10, 25, 50, 100];
 
 function preload() {
   worldParams = loadJSON("./worldParams.json");
 }
 
+function setSelectedMode(radioElementClicked) {
+  screen.mode = radioElementClicked.value;
+  rerenderBoard();
+}
+
 function setup() {
-  let cnv = createCanvas(BOARDSIZE * 6, BOARDSIZE * 6);
-  cnv.parent("main");
+  let cnv = createCanvas(SCREENSIZE, SCREENSIZE);
+  cnv.parent("canvas-container");
   document.getElementById("defaultCanvas0").oncontextmenu = (e) => false; //disables right click menu
-
-  frameRate(120);
-
-  debug = createCheckbox("Debug", false);
-  debug.parent("main");
-
-  radio = createRadio();
-  radio.option('geo');
-  radio.selected("geo");
-  radio.option('water');
-  radio.option('temp');
-  radio.option('height');
-  radio.parent("main");
 
   worldGenerator = new WorldGenerator(worldParams);
   board = new Board(BOARDSIZE);
@@ -47,16 +38,13 @@ function setup() {
 function draw() {
   document.getElementById("framerate").innerHTML = Math.floor(frameRate());
 
-  //background(120, 255, 120);
-
   let mouseCoords = screen.pxToBoardCoords(mouseX, mouseY);
   engine.setActiveTiles(board.grid, mouseCoords.x, mouseCoords.y);
 
   //draw grid
-  screen.mode = radio.value();
   screen.draw(board.grid);
 
-  if (debug.checked()) {
+  if (document.getElementById("debug").checked) {
     loadDebugData();
     drawDebugBox();
   }

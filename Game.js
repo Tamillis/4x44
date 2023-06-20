@@ -18,6 +18,7 @@ class Tile {
     this.forest = false;
     this.coastal = false;
     this.active = true;
+    this.discovered = true;
   }
 
   underMouse(mouseXCoord, mouseYCoord) {
@@ -116,16 +117,21 @@ class WorldGenerator {
     else tile.wet = this.wets.wet;
 
     //temperature
-
-    //temperature should vary primarily by latitude
+    
+    //temperature should vary primarily by latitude, although unfortunately with the island style this doesn't work as there's never snow and only ice in the deepsea
+    //se switching to a simple north-col south-hot and altitude model
     //a quadratic distribution for temps so midrange tiles are hottest and top and bottom are coldest,
     //no matter the range of j's, but always between 0 and 50
     //-(200/(dims*dims))*(j-dims)j = temp
 
     noiseSeed(this.noiseProfiles[2]);
+    /*
     let temp =
       floor(-(200 / (BOARDSIZE * BOARDSIZE)) * (j - BOARDSIZE) * j +
         noise(i * this.roughness, j * this.roughness) * 50);
+    */
+    
+    let temp = Math.floor(15 + j * 35 / BOARDSIZE + (noise(i * this.roughness, j * this.roughness) * 50) - 1 * alt / 4);
     tile.tempVal = temp;
     if (temp < this.temps.frozenLevel) tile.temp = this.temps.frozen;
     else if (temp < this.temps.coldLevel) tile.temp = this.temps.cold;
@@ -176,5 +182,8 @@ class Engine {
     }
 
     //other events may set tiles to active, i/e to re-render
+
+    //DEBUG TODO REMOVE
+    // if(mx >=0 && mx < BOARDSIZE && my >= 0 && my < BOARDSIZE) grid[mx][my].discovered = true;
   }
 }

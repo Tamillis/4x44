@@ -11,49 +11,58 @@ class Screen {
     this.dims = dims;
     this.border = this.scale * 4; //amount of white space around the map visible in px
     this.moveStep = 2; //amount to move per movekey in cells
-
+    this.buffer = createGraphics(width, height);
     this.mode = "geo";
   }
 
   draw(grid) {
     //draw the cells passed in via the 2D grid
+    //background(120, 255, 120);
 
-    textAlign(CENTER, CENTER);
-    strokeWeight(1);
+    //use a p5js createGraphics renderer object as an offscreen buffer
+    let buffer = this.buffer;
+    buffer.textAlign(CENTER, CENTER);
+    buffer.noStroke();
 
-    //draw the entire screen
+    //only render on screen tiles
     for (let i = 0; i < width / this.scale; i++) {
       for (let j = 0; j < height / this.scale; j++) {
-        //don't try to render cells that don't exist
-        if ((i + this.x >= this.dims || i + this.x < 0) ||
-          (j + this.y >= this.dims || j + this.y < 0)) {
-          push();
-          noStroke();
-          fill(255, 200, 200);
-          rect(i * this.scale, j * this.scale, this.scale, this.scale);
-          pop();
+        let x = i + this.x;
+        let y = j + this.y;
+        //don't try to render tiles that don't exist or don't need to be rendered
+        if (x >= this.dims || x < 0 || y >= this.dims || y < 0) {
+          buffer.fill(120, 255, 120);
+          buffer.rect(i * this.scale, j * this.scale, this.scale, this.scale);
           continue;
         }
 
-        if (!grid[i + this.x][j + this.y].active) continue;
+        if (!grid[x][y].active) continue;
 
-        //get cell to render
-        let cell = grid[i + this.x][j + this.y];
-        let { x, y } = this.pxToBoardCoords(mouseX, mouseY);
+        buffer.fill(this.renderTile(grid[x][y]));
 
-        //draw the cell, screen's responsibility to place it correctly on the screen
-        push();
-        //simple red highlight border
-        cell.underMouse(x, y) ? stroke(255, 0, 0) : noStroke();
-        fill(this.renderTile(cell));
-        rect(i * this.scale, j * this.scale, this.scale, this.scale);
-        pop();
+        buffer.rect(i * this.scale, j * this.scale, this.scale, this.scale);
       }
+    }
+
+    image(buffer, 0, 0);
+
+    //draw highlight border
+    let { x, y } = this.pxToBoardCoords(mouseX, mouseY);
+    if (!(x < 0 || x >= BOARDSIZE || y < 0 || y >= BOARDSIZE)) {
+      push();
+      fill(0, 0, 0, 0);
+      stroke(255, 0, 0);
+      strokeWeight(2);
+      x -= this.x;
+      y -= this.y;
+      rect(x * this.scale, y * this.scale, this.scale, this.scale);
+      pop();
     }
   }
 
   renderTile(tile) {
     //the Screen renders tiles based on the screen's current mode
+    const unknown = "#555";
     const ocean = "#2B65EC";
     const deepocean = "#204FBD";
     const sand = "#C2B280";
@@ -66,8 +75,11 @@ class Screen {
     const snow = "#fffafa";
     const jungle = "#29ab46";
 
+    if (!tile.discovered) return unknown;
+
     switch (this.mode) {
       case "geo":
+        if (tile.alt == "mountains") return rock;
         if (tile.temp == "frozen") return ice;
         if (tile.alt == "sea") return ocean;
         if (tile.alt == "deepsea") return deepocean;
@@ -80,12 +92,12 @@ class Screen {
         if (tile.coastal == "coast") return sand;
         if (tile.coastal == "cliffs") return rock;
 
-        if (tile.temp == "cold") return snow;
-
         if (tile.alt == "highlands") return hills;
-        if (tile.alt == "mountains") return rock;
 
         if (tile.wet == "desert") return sand;
+
+        if (tile.temp == "cold") return snow;
+
         break;
       case "water":
         return color(30, 60, 2.55 * tile.wetVal);
@@ -127,8 +139,8 @@ class Screen {
     this.scale = this.scales[this.scaleStep];
 
     //adjust
-    this.x -= floor(width / this.scale / 2);
-    this.y -= floor(height / this.scale / 2);
+    this.x -= Math.floor(width / this.scale / 2);
+    this.y -= Math.floor(height / this.scale / 2);
 
     this.border = this.scale * 4;
   }
@@ -148,7 +160,16 @@ class Screen {
     let x = this.x * this.scale;
     let y = this.y * this.scale;
 
-    let toCoord = (val) => floor(val / this.scale);
+    //if the game bord in px + 2 * border is less than the width or height, instead centre the screen
+    let maxBoardLength = BOARDSIZE * this.scale + this.border * 2;
+    console.log(maxBoardLength, width)
+    if (maxBoardLength < width || maxBoardLength < height) {
+      this.x = -Math.floor(((width - maxBoardLength) / 2) / this.scale);
+      this.y = -Math.floor(((height - maxBoardLength) / 2) / this.scale);
+      return;
+    }
+
+    let toCoord = (val) => Math.floor(val / this.scale);
 
     if (x < -this.border) this.x = toCoord(-this.border);
     if (y < -this.border) this.y = toCoord(-this.border);

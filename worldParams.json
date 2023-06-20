@@ -16,9 +16,9 @@
     },
     "wets" : {
       "desert": "desert",
-      "desertLevel": 35,
+      "desertLevel": 20,
       "dry": "dry",
-      "dryLevel": 75,
+      "dryLevel": 60,
       "wet": "wet"
     },
     "temps" : {

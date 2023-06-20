@@ -28,6 +28,24 @@
   <body>
     <main id="main">
       <p id="framerate">LOADING GAME</p>
+
+      <div id="canvas-container"></div>
+
+      <div>
+        <input type="checkbox" id="debug">
+        <label for="debug">Debug</label>
+      </div>
+
+      <div>
+        <input type="radio" id="geo" name="mode" onclick="setSelectedMode(this)" value="geo" checked>
+        <label for="geo">Geo</label>
+        <input type="radio" id="water" name="mode" onclick="setSelectedMode(this)" value="water">
+        <label for="water">Water</label>
+        <input type="radio" id="temp" name="mode" onclick="setSelectedMode(this)" value="temp">
+        <label for="temp">Temp</label>
+        <input type="radio" id="height" name="mode" onclick="setSelectedMode(this)" value="height">
+        <label for="height">Height</label>
+      </div>
     </main>
     <script src="sketch.js"></script>
   </body>
