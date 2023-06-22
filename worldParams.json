@@ -15,6 +15,11 @@
       "highlandsLevel": 75,
       "mountains": "mountains"
     },
+    "ridges" : {
+      "smoothing" : 6,
+      "driftForceMax" : 15,
+      "driftForceMin" : 5
+    },
     "wets" : {
       "desert": "desert",
       "desertLevel": 20,
@@ -39,11 +44,11 @@
       "saltwater" : "saltwater"
     },
     "reqs" : {
-      "minMountains" : 20,
+      "minMountains" : 15,
       "maxMountains" : 150,
       "minHillRatio" : 0.1,
-      "maxHillRatio" : 0.45,
+      "maxHillRatio" : 0.33,
       "maxLandRatio" : 0.45,
-      "minLandRatio" : 0.3
+      "minLandRatio" : 0.25
     }
 }

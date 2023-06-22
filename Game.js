@@ -46,6 +46,9 @@ class Board {
 class WorldGenerator {
   constructor(params) {
     //load world generator information
+
+    //TODO set up seed
+
     this.noiseProfiles = [Math.random() * 100, Math.random() * 100, Math.random() * 100];
     Object.keys(params).forEach(k => {
       this[k] = params[k];
@@ -75,9 +78,11 @@ class WorldGenerator {
       }
     }
 
+    console.log("initial tile data done");
+
+    //altitude
     for (let i = 0; i < BOARDSIZE; i++) {
       for (let j = 0; j < BOARDSIZE; j++) {
-        //altitude
         let tile = grid[i][j];
         noiseSeed(this.noiseProfiles[0]);
         let altNoise = Math.floor(noise(i * this.roughness, j * this.roughness) * 50)
@@ -87,9 +92,11 @@ class WorldGenerator {
       }
     }
 
+    console.log("initial alts done");
+
     //adjust heights by generating ridges and troughs from regions and smoothing them out, using it as a mask
     let regionDriftForces = {};
-    for (let i = 0; i < this.regions; i++) regionDriftForces[i + 1] = this.getVectorForce(10);
+    for (let i = 0; i < this.regions; i++) regionDriftForces[i + 1] = this.getVectorForce(this.ridges.driftForceMax, this.ridges.driftForceMin);
 
     //only for tiles that have neighbours
     for (let i = 1; i < BOARDSIZE - 1; i++) {
@@ -114,7 +121,7 @@ class WorldGenerator {
     }
 
     //and smooth
-    for (let i = 0; i < 6; i++) this.smoothAlts(grid);
+    for (let i = 0; i < this.ridges.smoothing; i++) this.smoothVals(grid, "ridgeAlt");
 
     //scale ridgeAlt values from shallowest-tallest to 0-100
     let tallestRidge = 0, shallowestTrough = 0;
@@ -138,6 +145,8 @@ class WorldGenerator {
       }
     }
 
+    console.log("ridges calculated and applied");
+
     //temperature
     for (let i = 0; i < BOARDSIZE; i++) {
       for (let j = 0; j < BOARDSIZE; j++) {
@@ -156,43 +165,49 @@ class WorldGenerator {
             noise(i * this.roughness, j * this.roughness) * 50);
         */
 
-        let temp = Math.floor(15 + j * 35 / BOARDSIZE + (noise(i * this.roughness, j * this.roughness) * 50) - 1 * tile.altVal / 4);
+        let temp = Math.floor(20 + j * 35 / BOARDSIZE + (noise(i * this.roughness, j * this.roughness) * 50) - Math.pow(tile.altVal-this.alts.seaLevel, 2) / 35);
         //make sea tiles warmer
         if (tile.altVal < this.alts.seaLevel) temp += 10;
         tile.tempVal = temp;
       }
     }
 
+    console.log("temp data done");
+
+    //wetness
     for (let i = 0; i < BOARDSIZE; i++) {
       for (let j = 0; j < BOARDSIZE; j++) {
         let tile = grid[i][j];
-
-        //wetness
         noiseSeed(this.noiseProfiles[1]);
         //made water distribution have less roughness than land because seems right
         let wet = Math.floor(noise(i * this.roughness * 0.8, j * this.roughness * 0.8) * 100);
         tile.wetVal = wet;
-
-        //now that alt, wet and temp values are all sorted, tile types can properly be assigned
-        for (let i = 0; i < BOARDSIZE; i++) {
-          for (let j = 0; j < BOARDSIZE; j++) {
-            this.setTileType(grid[i][j]);
-          }
-        }
-
-        //finally set water tiles to wet 100
-        for (let i = 0; i < BOARDSIZE; i++) {
-          for (let j = 0; j < BOARDSIZE; j++) {
-            grid[i][j].wetVal = grid[i][j].water ? 100 : grid[i][j].wetVal;
-          }
-        }
       }
     }
+
+    console.log("wet data done");
+
+    //now that alt, wet and temp values are all sorted, tile types can properly be assigned
+    for (let i = 0; i < BOARDSIZE; i++) {
+      for (let j = 0; j < BOARDSIZE; j++) {
+        this.setTileType(grid[i][j]);
+      }
+    }
+
+    console.log("tile types set")
+
+    //finally set water tiles to wet 100
+    for (let i = 0; i < BOARDSIZE; i++) {
+      for (let j = 0; j < BOARDSIZE; j++) {
+        grid[i][j].wetVal = grid[i][j].water ? 100 : grid[i][j].wetVal;
+      }
+    }
+
+    // TODO set outside water to saltwater with a floodfill algorithm
 
     //process tiles using neighbouring information
     for (let i = 0; i < BOARDSIZE; i++) {
       for (let j = 0; j < BOARDSIZE; j++) {
-        //make tiles next to saltwater coastal
         let { top, right, bottom, left } = this.getNeighbouringTileCoords(i, j);
         let tile = grid[i][j], topTile = grid[top.x][top.y], rightTile = grid[right.x][right.y], bottomTile = grid[bottom.x][bottom.y], leftTile = grid[left.x][left.y];
 
@@ -221,6 +236,8 @@ class WorldGenerator {
       }
     }
 
+    console.log("coastal tiles and hills done");
+
     //do a game of life pass on wether tiles are forested
     let forestAdjustments = [];
     for (let i = 0; i < BOARDSIZE; i++) {
@@ -244,7 +261,10 @@ class WorldGenerator {
       }
     }
 
+    console.log("forests adjusted");
+
     //check world meets this.reqs
+    console.log("checking reqs");
     grid = this.checkReqs(grid);
 
     return grid;
@@ -283,18 +303,18 @@ class WorldGenerator {
     else return false;
   }
 
-  smoothAlts(grid) {
-    let oldAlts = [];
+  smoothVals(grid, value) {
+    let oldVals = [];
     for (let i = 0; i < BOARDSIZE; i++) {
-      oldAlts[i] = [];
+      oldVals[i] = [];
       for (let j = 0; j < BOARDSIZE; j++) {
-        oldAlts[i][j] = grid[i][j].ridgeAlt;
+        oldVals[i][j] = grid[i][j][value];
       }
     }
 
     for (let i = 1; i < BOARDSIZE - 1; i++) {
       for (let j = 1; j < BOARDSIZE - 1; j++) {
-        grid[i][j].ridgeAlt = Math.floor((oldAlts[i][j] + oldAlts[i - 1][j] + oldAlts[i + 1][j] + oldAlts[i - 1][j + 1] + oldAlts[i][j - 1]) / 5);
+        grid[i][j][value] = Math.floor((oldVals[i][j] + oldVals[i - 1][j] + oldVals[i + 1][j] + oldVals[i - 1][j + 1] + oldVals[i][j - 1]) / 5);
       }
     }
   }

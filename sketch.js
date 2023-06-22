@@ -16,23 +16,9 @@ function preload() {
   worldParams = loadJSON("./worldParams.json");
 }
 
-function setSelectedMode(radioElementClicked) {
-  screen.mode = radioElementClicked.value;
-  rerenderBoard();
-}
-
-function getMode() {
-  let radioBtns = document.getElementsByName("mode");
-  let mode = "";
-
-  for(let btn of radioBtns) {
-    if(btn.checked) mode = btn.value;
-  }
-
-  return mode;
-}
-
 function setup() {
+  //TODO setup the entire sketch in a worker so that mapgen can have a loading screen
+  
   debug = document.getElementById("debug").checked;
   let cnv = createCanvas(SCREENSIZE, SCREENSIZE);
   cnv.parent("canvas-container");
