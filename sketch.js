@@ -21,7 +21,19 @@ function setSelectedMode(radioElementClicked) {
   rerenderBoard();
 }
 
+function getMode() {
+  let radioBtns = document.getElementsByName("mode");
+  let mode = "";
+
+  for(let btn of radioBtns) {
+    if(btn.checked) mode = btn.value;
+  }
+
+  return mode;
+}
+
 function setup() {
+  debug = document.getElementById("debug").checked;
   let cnv = createCanvas(SCREENSIZE, SCREENSIZE);
   cnv.parent("canvas-container");
   document.getElementById("defaultCanvas0").oncontextmenu = (e) => false; //disables right click menu
@@ -32,6 +44,7 @@ function setup() {
 
   screen = new Screen(BOARDSCALES, BOARDSIZE);
   screen.checkBounds();
+  screen.mode = this.getMode();
   screen.draw(board.grid);
 
   engine = new Engine();
@@ -68,36 +81,45 @@ function loadDebugData() {
   debugData.forest = board.grid[x][y].forest;
   debugData.coastal = board.grid[x][y].coastal;
   debugData.region = board.grid[x][y].region;
+  debugData.hilly = board.grid[x][y].hilly;
 }
 
 function drawDebugBox() {
-  push();
+  //basic debug info for tile under mouse
+  const border = 15;
+  let x = border, y = border;
+  const w = width / 4 + x * 2;
+  const tSize = 12;
+  const h = Object.keys(debugData).length * (tSize + 2);
 
-  //basic debug info for mouse tile
-  textAlign(LEFT, CENTER);
+  if (mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h) x = width - w - border;
+
+  push();
+  textSize(tSize);
+  textAlign(LEFT, TOP);
   fill(255);
   strokeWeight(1);
-  rect(15, 15, width / 4 + 30, Object.keys(debugData).length * 18);
+  rect(x, y, w, h);
   fill(0);
   strokeWeight(2);
   Object.keys(debugData).forEach((k, i) => {
-    text(k + " : " + debugData[k], 25, 25 + i * 18);
+    text(k + " : " + debugData[k], x + 5, y + 5 + i * (tSize + 1));
   });
 
   //wind indicator crosshair
-  let crosshair = { x: width / 4, y: 15 + Object.keys(debugData).length * 18 / 2};
+  let crosshair = { x: x + w - border * 2, y: y + h / 2 };
   textAlign(CENTER, CENTER);
   noStroke(1);
-  text("Wind:", crosshair.x, crosshair.y - 40);
+  text("Wind:", crosshair.x, crosshair.y - border * 3);
 
   strokeWeight(2);
   stroke(0);
-  line(crosshair.x - 15*2, crosshair.y, crosshair.x + 15*2, crosshair.y);
-  line(crosshair.x, crosshair.y - 15*2, crosshair.x, crosshair.y + 15*2);
-  
+  line(crosshair.x - border * 2, crosshair.y, crosshair.x + border * 2, crosshair.y);
+  line(crosshair.x, crosshair.y - border * 2, crosshair.x, crosshair.y + border * 2);
+
   strokeWeight(4);
   stroke("#AAA");
-  line(crosshair.x, crosshair.y, 0.3*board.wind.x + crosshair.x, 0.3*board.wind.y + crosshair.y);
+  line(crosshair.x, crosshair.y, 0.25 * board.wind.x + crosshair.x, 0.25 * board.wind.y + crosshair.y);
   pop();
 }
 

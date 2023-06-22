@@ -1,12 +1,12 @@
 {
-    "roughness" : 0.06,
-    "forestation" : 0.6,
-    "hydration" : 0.05,
-    "regions" : 6,
+    "roughness" : 0.125,
+    "forestation" : 0.45,
+    "hydration" : 0.025,
+    "regions" : 8,
 
     "alts" : {
       "deepsea": "deepsea",
-      "deepseaLevel": 30,
+      "deepseaLevel": 20,
       "sea": "sea",
       "seaLevel": 40,
       "lowlands": "lowlands",
@@ -24,13 +24,26 @@
     },
     "temps" : {
       "frozen": "frozen",
-      "frozenLevel": 20,
+      "frozenLevel": 25,
       "cold": "cold",
       "coldLevel": 35,
       "mild": "mild",
-      "mildLevel": 60,
+      "mildLevel": 50,
       "warm": "warm",
-      "warmLevel": 75,
+      "warmLevel": 60,
       "hot": "hot"
+    },
+    "waters" : {
+      "none" : false,
+      "freshwater" : "freshwater",
+      "saltwater" : "saltwater"
+    },
+    "reqs" : {
+      "minMountains" : 20,
+      "maxMountains" : 150,
+      "minHillRatio" : 0.1,
+      "maxHillRatio" : 0.45,
+      "maxLandRatio" : 0.45,
+      "minLandRatio" : 0.3
     }
 }

@@ -8,15 +8,20 @@
 class Tile {
   constructor(x, y) {
     //most of these are assigned later but defining them here too for readability, with default values
+
+    //geographic properties
     this.x = x;
     this.y = y;
-    this.id = "x";
     this.alt = 50;
     this.temp = 50;
     this.wet = 50;
     this.water = false;
     this.forest = false;
     this.coastal = false;
+    this.hilly = false;
+
+    //game engine properties
+    this.id = "x";
     this.active = true;
     this.discovered = true;
   }
@@ -97,9 +102,7 @@ class WorldGenerator {
     }
 
     //and smooth
-    this.smoothAlts(grid);
-    this.smoothAlts(grid);
-    this.smoothAlts(grid);
+    for (let i = 0; i < 6; i++) this.smoothAlts(grid);
 
     //scale ridgeAlt values from shallowest-tallest to 0-100
     let tallestRidge = 0, shallowestTrough = 0;
@@ -110,52 +113,125 @@ class WorldGenerator {
       }
     }
 
-    console.log(tallestRidge, shallowestTrough);
-
     for (let i = 0; i < BOARDSIZE; i++) {
       for (let j = 0; j < BOARDSIZE; j++) {
-        grid[i][j].ridgeAlt = 20 / (tallestRidge - shallowestTrough) * (grid[i][j].ridgeAlt -20 - shallowestTrough);
+        grid[i][j].ridgeAlt = 50 / (tallestRidge - shallowestTrough) * (grid[i][j].ridgeAlt);
       }
     }
 
     //adjust alt vals
     for (let i = 0; i < BOARDSIZE; i++) {
       for (let j = 0; j < BOARDSIZE; j++) {
-        //grid[i][j].altVal = Math.floor(grid[i][j].altVal + grid[i][j].ridgeAlt);
-        grid[i][j].altVal = Math.floor(grid[i][j].ridgeAlt +50);
+        grid[i][j].altVal = Math.floor(grid[i][j].altVal + grid[i][j].ridgeAlt);
       }
     }
 
+    //now that alt, wet and temp values are all sorted, tile types can properly be assigned
     for (let i = 0; i < BOARDSIZE; i++) {
       for (let j = 0; j < BOARDSIZE; j++) {
         this.setTileType(grid[i][j]);
       }
     }
 
-    //process tiles using neighbouring information
-
-    //set coastal tiles to coastal
+    //finally set water tiles to wet 100
     for (let i = 0; i < BOARDSIZE; i++) {
       for (let j = 0; j < BOARDSIZE; j++) {
-        //make tiles next to saltwater coastal
-        let { top, right, bottom, left } = this.getNeighbouringTiles(i, j);
-
-        //set coastal tiles
-        if (
-          (grid[i][top].water == "saltwater" ||
-            grid[i][bottom].water == "saltwater" ||
-            grid[left][j].water == "saltwater" ||
-            grid[right][j].water == "saltwater") &&
-          grid[i][j].water !== "saltwater"
-        ) {
-          grid[i][j].coastal = grid[i][j].altVal > this.alts.lowlandsLevel ? "cliffs" : "coast";
-        }
+        grid[i][j].wetVal = grid[i][j].water ? 100 : grid[i][j].wetVal;
       }
     }
 
-    //do a game of life pass on wether tiles are forested  TODO
+    //process tiles using neighbouring information
+    for (let i = 0; i < BOARDSIZE; i++) {
+      for (let j = 0; j < BOARDSIZE; j++) {
+        //make tiles next to saltwater coastal
+        let { top, right, bottom, left } = this.getNeighbouringTileCoords(i, j);
+        let tile = grid[i][j], topTile = grid[top.x][top.y], rightTile = grid[right.x][right.y], bottomTile = grid[bottom.x][bottom.y], leftTile = grid[left.x][left.y];
+
+        if (!tile.water && tile.alt !== this.alts.mountains) {
+          //set tiles significantly altitudially different to their neighbours as "hills"
+          let changes = 0, altDiff = 3, reqDiffNbrs = 2;
+          if (Math.abs(topTile.altVal - tile.altVal) > altDiff) changes++;
+          if (Math.abs(rightTile.altVal - tile.altVal) > altDiff) changes++;
+          if (Math.abs(bottomTile.altVal - tile.altVal) > altDiff) changes++;
+          if (Math.abs(leftTile.altVal - tile.altVal) > altDiff) changes++;
+          if (changes >= reqDiffNbrs) tile.hilly = true;
+        }
+
+        //set coastal tiles
+        if (
+          (topTile.water == "saltwater" ||
+            bottomTile.water == "saltwater" ||
+            leftTile.water == "saltwater" ||
+            rightTile.water == "saltwater") &&
+          grid[i][j].water !== "saltwater"
+        ) {
+          grid[i][j].coastal = grid[i][j].hilly ? "cliffs" : "coast";
+        }
+
+        //drag heat and wetness with the wind, basic fluid sim? alt will block / cause build-up TODO
+      }
+    }
+
+    //do a game of life pass on wether tiles are forested
+    let forestAdjustments = [];
+    for (let i = 0; i < BOARDSIZE; i++) {
+      forestAdjustments[i] = [];
+      for (let j = 0; j < BOARDSIZE; j++) {
+        forestAdjustments[i][j] = grid[i][j].forest ? true : false;
+      }
+    }
+
+    for (let i = 1; i < BOARDSIZE - 1; i++) {
+      for (let j = 1; j < BOARDSIZE - 1; j++) {
+        let { top, right, bottom, left } = this.getNeighbouringTileCoords(i, j);
+        let forestNbrsCount = 0;
+        if (forestAdjustments[top.x][top.y]) forestNbrsCount++;
+        if (forestAdjustments[right.x][right.y]) forestNbrsCount++;
+        if (forestAdjustments[bottom.x][bottom.y]) forestNbrsCount++;
+        if (forestAdjustments[left.x][left.y]) forestNbrsCount++;
+
+        if (forestNbrsCount <= 1) grid[i][j].forest = false;
+        if (forestNbrsCount >= 3) grid[i][j].forest = this.assignForest(grid[i][j]);
+      }
+    }
+
+    //check world meets this.reqs
+    grid = this.checkReqs(grid);
 
     return grid;
+  }
+
+  checkReqs(grid) {
+    let mountainCount = 0, landCount = 0, hillCount = 0;
+    for (let i = 0; i < BOARDSIZE; i++) {
+      for (let j = 0; j < BOARDSIZE; j++) {
+        if (grid[i][j].alt == this.alts.mountains) mountainCount++;
+        if (grid[i][j].water !== this.waters.saltwater) landCount++;
+        if (grid[i][j].hilly) hillCount++;
+      }
+    }
+
+    let landRatio = landCount / (BOARDSIZE * BOARDSIZE);
+    let hillRatio = hillCount / landCount;
+    if (debug) console.log(`mountainCount ${mountainCount}`, `landRatio ${landRatio}`, `hillRatio ${hillRatio}`);
+
+    if (landRatio < this.reqs.minLandRatio ||
+      landRatio > this.reqs.maxLandRatio ||
+      mountainCount < this.reqs.minMountains ||
+      mountainCount > this.reqs.maxMountains ||
+      hillRatio < this.reqs.minHillRatio ||
+      hillRatio > this.reqs.maxHillRatio) {
+      if (debug) console.warn("Regen-ing");
+      grid = this.genGrid(grid);
+    }
+
+    return grid;
+  }
+
+  assignForest(tile) {
+    if (tile.temp !== "frozen" && tile.temp !== "hot") return "forest";
+    else if (tile.temp == "hot") return "jungle";
+    else return false;
   }
 
   smoothAlts(grid) {
@@ -174,11 +250,13 @@ class WorldGenerator {
     }
   }
 
-  getNeighbouringTiles(i, j) {
-    let top = j - 1 < 0 ? j : j - 1;
-    let right = i + 1 >= BOARDSIZE ? i : i + 1;
-    let bottom = j + 1 >= BOARDSIZE ? j : j + 1;
-    let left = i - 1 < 0 ? i : i - 1;
+  getNeighbouringTileCoords(i, j) {
+    //selects current tile if at the edge/corner
+
+    let top = { x: i, y: j - 1 < 0 ? j : j - 1 };
+    let right = { x: i + 1 >= BOARDSIZE ? i : i + 1, y: j };
+    let bottom = { x: i, y: j + 1 >= BOARDSIZE ? j : j + 1 };
+    let left = { x: i - 1 < 0 ? i : i - 1, y: j };
 
     return { top, right, bottom, left };
   }
@@ -196,9 +274,7 @@ class WorldGenerator {
     //wetness
     noiseSeed(this.noiseProfiles[1]);
     //made water distribution have less roughness than land because seems right
-    let wet = alt < this.alts.seaLevel ? 100 : Math.floor(
-      noise(i * this.roughness * 0.8, j * this.roughness * 0.8) * 100
-    );
+    let wet = Math.floor(noise(i * this.roughness * 0.8, j * this.roughness * 0.8) * 100);
     tile.wetVal = wet;
 
     //temperature
@@ -217,6 +293,8 @@ class WorldGenerator {
     */
 
     let temp = Math.floor(15 + j * 35 / BOARDSIZE + (noise(i * this.roughness, j * this.roughness) * 50) - 1 * alt / 4);
+    //make sea tiles warmer
+    if (tile.altVal < this.alts.seaLevel) temp += 10;
     tile.tempVal = temp;
 
     return tile;
@@ -239,8 +317,8 @@ class WorldGenerator {
     else if (tile.tempVal < this.temps.warmLevel) tile.temp = this.temps.warm;
     else tile.temp = this.temps.hot;
 
-    //set water tiles
-    if (tile.alt == "deepsea" || tile.alt == "sea") tile.water = "saltwater";
+    //set water tiles, TODO: assume freshwater initially with a sea-water flood-fill pass coming after, meaning lakes can be freshwater
+    if (tile.alt == "deepsea" || tile.alt == "sea") tile.water = this.waters.saltwater;
     else if ((tile.wet == "desert") & (Math.random() < this.hydration / 4))
       tile.water = "freshwater";
     else if ((tile.wet == "dry") & (Math.random() < this.hydration / 2))
@@ -255,8 +333,7 @@ class WorldGenerator {
       tile.wet !== "desert" &&
       Math.random() < this.forestation
     ) {
-      if (tile.temp !== "frozen" && tile.temp !== "hot") tile.forest = "forest";
-      else if (tile.temp == "hot") tile.forest = "jungle";
+      tile.forest = this.assignForest(tile);
     }
   }
 }
@@ -294,23 +371,19 @@ class RegionGenerator {
   createRegions() {
     //first reset the data array to blanks of the current i j dimensions
     this.create2Darray();
-    if (this.debug) console.log("2D array created");
 
     //get random starting positions, having checked for no overlap
     let startCells = this.pickStarts();
-    if (this.debug) console.log("Starting positions determined");
+
     for (let i = 0; i < startCells.length; i++) {
       this.data[startCells[i][0]][startCells[i][1]] = i + 1; //+1 since 0 is null white
     }
-    if (this.debug) console.log("Starting positions assigned");
 
     //assign according to nearest id, passing in start coordinates
     this.assignNearest(startCells);
-    if (this.debug) console.log("Nearest starting positions assigned");
 
     //make sure that the continents are contiguous
     this.makeContiguous();
-    if (this.debug) console.log("All cells made contigious enough");
   }
 
   pickStarts() {
@@ -341,7 +414,7 @@ class RegionGenerator {
           if (x == starts[i][0] && y == starts[i][1]) {
             //if the x AND y match then there's a conflict so overlap is true
             overlap = true;
-            console.log("Overlap detected");
+            if (debug) console.log("RegionGenerator: Overlap detected, retrying");
             //break for efficiency
             break;
           }

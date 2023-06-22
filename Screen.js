@@ -17,7 +17,6 @@ class Screen {
 
   draw(grid) {
     //draw the cells passed in via the 2D grid
-    //background(120, 255, 120);
 
     //use a p5js createGraphics renderer object as an offscreen buffer
     let buffer = this.buffer;
@@ -36,11 +35,20 @@ class Screen {
           continue;
         }
 
+        //only need to redraw cells that have changed, i.e. set to active by the engine
         if (!grid[x][y].active) continue;
 
         buffer.fill(this.renderTile(grid[x][y]));
 
         buffer.rect(i * this.scale, j * this.scale, this.scale, this.scale);
+
+        if (grid[x][y].hilly && this.mode == "geo" && grid[x][y].coastal !== "cliffs") {
+          buffer.push();
+          buffer.strokeWeight(1);
+          buffer.stroke(0);
+          buffer.line(i * this.scale, j * this.scale, (i + 1) * this.scale, (j + 1) * this.scale);
+          buffer.pop();
+        }
       }
     }
 
@@ -62,7 +70,7 @@ class Screen {
 
   renderTile(tile) {
     //the Screen renders tiles based on the screen's current mode
-    const unknown = "#555";
+    const unknown = "#888";
     const ocean = "#2B65EC";
     const deepocean = "#204FBD";
     const sand = "#C2B280";
@@ -81,10 +89,10 @@ class Screen {
       case "geo":
         if (tile.alt == "mountains") return rock;
         if (tile.temp == "frozen") return ice;
+        if (tile.water == "freshwater") return river;
         if (tile.alt == "sea") return ocean;
         if (tile.alt == "deepsea") return deepocean;
 
-        if (tile.water == "freshwater") return river;
 
         if (tile.forest == "forest") return woods;
         if (tile.forest == "jungle") return jungle;
@@ -111,21 +119,33 @@ class Screen {
 
       case "temp":
         return color(2.55 * tile.tempVal, 2.55 * tile.tempVal, 120);
-      
+
       case "region":
-        switch(tile.region) {
+        switch (tile.region) {
           case 1:
-            return ocean;
+            return unknown;
           case 2:
-            return sand;
+            return ocean;
           case 3:
-            return grass;
+            return deepocean;
           case 4:
-            return snow;
+            return sand;
           case 5:
-            return rock;
+            return grass;
           case 6:
+            return hills;
+          case 7:
+            return woods;
+          case 8:
+            return rock;
+          case 9:
+            return ice;
+          case 10:
             return river;
+          case 11:
+            return snow;
+          case 12:
+            return jungle;
         }
 
         break;
