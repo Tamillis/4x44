@@ -67,11 +67,23 @@ class WorldGenerator {
     //generate initial tile data from perlin noise & latitude and wind
     for (let i = 0; i < BOARDSIZE; i++) {
       for (let j = 0; j < BOARDSIZE; j++) {
-        let tile = this.genNewTile(i, j);
+        let tile = new Tile(i, j);
         grid[i][j] = tile;
         grid[i][j].id = `${j * grid[i].length + i}`;
         grid[i][j].region = regionGen.data[i][j];
         grid[i][j].ridgeAlt = 0;
+      }
+    }
+
+    for (let i = 0; i < BOARDSIZE; i++) {
+      for (let j = 0; j < BOARDSIZE; j++) {
+        //altitude
+        let tile = grid[i][j];
+        noiseSeed(this.noiseProfiles[0]);
+        let altNoise = Math.floor(noise(i * this.roughness, j * this.roughness) * 50)
+        let altIslandBias = Math.floor(50 - (50 / (BOARDSIZE / 2)) * Math.sqrt(((i - BOARDSIZE / 2) * (i - BOARDSIZE / 2) + (j - BOARDSIZE / 2) * (j - BOARDSIZE / 2) + 1)));
+        let alt = altNoise + altIslandBias;
+        tile.altVal = alt;
       }
     }
 
@@ -126,17 +138,54 @@ class WorldGenerator {
       }
     }
 
-    //now that alt, wet and temp values are all sorted, tile types can properly be assigned
+    //temperature
     for (let i = 0; i < BOARDSIZE; i++) {
       for (let j = 0; j < BOARDSIZE; j++) {
-        this.setTileType(grid[i][j]);
+        let tile = grid[i][j];
+
+        //temperature should vary primarily by latitude, although unfortunately with the island style this doesn't work as there's never snow and only ice in the deepsea
+        //se switching to a simple north-col south-hot and altitude model
+        //a quadratic distribution for temps so midrange tiles are hottest and top and bottom are coldest,
+        //no matter the range of j's, but always between 0 and 50
+        //-(200/(dims*dims))*(j-dims)j = temp
+
+        noiseSeed(this.noiseProfiles[2]);
+        /*
+        let temp =
+          floor(-(200 / (BOARDSIZE * BOARDSIZE)) * (j - BOARDSIZE) * j +
+            noise(i * this.roughness, j * this.roughness) * 50);
+        */
+
+        let temp = Math.floor(15 + j * 35 / BOARDSIZE + (noise(i * this.roughness, j * this.roughness) * 50) - 1 * tile.altVal / 4);
+        //make sea tiles warmer
+        if (tile.altVal < this.alts.seaLevel) temp += 10;
+        tile.tempVal = temp;
       }
     }
 
-    //finally set water tiles to wet 100
     for (let i = 0; i < BOARDSIZE; i++) {
       for (let j = 0; j < BOARDSIZE; j++) {
-        grid[i][j].wetVal = grid[i][j].water ? 100 : grid[i][j].wetVal;
+        let tile = grid[i][j];
+
+        //wetness
+        noiseSeed(this.noiseProfiles[1]);
+        //made water distribution have less roughness than land because seems right
+        let wet = Math.floor(noise(i * this.roughness * 0.8, j * this.roughness * 0.8) * 100);
+        tile.wetVal = wet;
+
+        //now that alt, wet and temp values are all sorted, tile types can properly be assigned
+        for (let i = 0; i < BOARDSIZE; i++) {
+          for (let j = 0; j < BOARDSIZE; j++) {
+            this.setTileType(grid[i][j]);
+          }
+        }
+
+        //finally set water tiles to wet 100
+        for (let i = 0; i < BOARDSIZE; i++) {
+          for (let j = 0; j < BOARDSIZE; j++) {
+            grid[i][j].wetVal = grid[i][j].water ? 100 : grid[i][j].wetVal;
+          }
+        }
       }
     }
 
@@ -259,45 +308,6 @@ class WorldGenerator {
     let left = { x: i - 1 < 0 ? i : i - 1, y: j };
 
     return { top, right, bottom, left };
-  }
-
-  genNewTile(i, j) {
-    let tile = new Tile(i, j);
-
-    //altitude
-    noiseSeed(this.noiseProfiles[0]);
-    let altNoise = Math.floor(noise(i * this.roughness, j * this.roughness) * 50)
-    let altIslandBias = Math.floor(50 - (50 / (BOARDSIZE / 2)) * Math.sqrt(((i - BOARDSIZE / 2) * (i - BOARDSIZE / 2) + (j - BOARDSIZE / 2) * (j - BOARDSIZE / 2) + 1)));
-    let alt = altNoise + altIslandBias;
-    tile.altVal = alt;
-
-    //wetness
-    noiseSeed(this.noiseProfiles[1]);
-    //made water distribution have less roughness than land because seems right
-    let wet = Math.floor(noise(i * this.roughness * 0.8, j * this.roughness * 0.8) * 100);
-    tile.wetVal = wet;
-
-    //temperature
-
-    //temperature should vary primarily by latitude, although unfortunately with the island style this doesn't work as there's never snow and only ice in the deepsea
-    //se switching to a simple north-col south-hot and altitude model
-    //a quadratic distribution for temps so midrange tiles are hottest and top and bottom are coldest,
-    //no matter the range of j's, but always between 0 and 50
-    //-(200/(dims*dims))*(j-dims)j = temp
-
-    noiseSeed(this.noiseProfiles[2]);
-    /*
-    let temp =
-      floor(-(200 / (BOARDSIZE * BOARDSIZE)) * (j - BOARDSIZE) * j +
-        noise(i * this.roughness, j * this.roughness) * 50);
-    */
-
-    let temp = Math.floor(15 + j * 35 / BOARDSIZE + (noise(i * this.roughness, j * this.roughness) * 50) - 1 * alt / 4);
-    //make sea tiles warmer
-    if (tile.altVal < this.alts.seaLevel) temp += 10;
-    tile.tempVal = temp;
-
-    return tile;
   }
 
   setTileType(tile) {
