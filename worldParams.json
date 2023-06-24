@@ -1,7 +1,7 @@
 {
     "roughness" : 0.125,
     "forestation" : 0.45,
-    "hydration" : 0.025,
+    "hydration" : 0.02,
     "regions" : 8,
 
     "alts" : {

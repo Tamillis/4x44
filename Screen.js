@@ -14,6 +14,7 @@ export class Screen {
     this.p5 = p5;
     this.buffer = p5.createGraphics(p5.width, p5.height);
     this.mode = "geo";
+    this.priorMode = "geo";
   }
 
   draw(grid) {
@@ -39,15 +40,36 @@ export class Screen {
         //only need to redraw cells that have changed, i.e. set to active by the engine
         if (!grid[x][y].active) continue;
 
+        //draw base tile colour
         buffer.fill(this.getTileFill(grid[x][y]));
-
         buffer.rect(i * this.scale, j * this.scale, this.scale, this.scale);
 
+        //draw hills line
         if (grid[x][y].hilly && this.mode == "geo" && grid[x][y].coastal !== "cliffs") {
           buffer.push();
           buffer.strokeWeight(1);
           buffer.stroke(0);
           buffer.line(i * this.scale, j * this.scale, (i + 1) * this.scale, (j + 1) * this.scale);
+          buffer.pop();
+        }
+
+        //draw river lines
+        if (grid[x][y].river && this.mode == "geo") {
+          buffer.push();
+          buffer.strokeWeight(2);
+          buffer.stroke(0,0,255);
+          if(grid[x][y].river.includes("N")) {
+            buffer.line((i+0.5) * this.scale, j * this.scale, (i + 0.5) * this.scale, (j + 0.5) * this.scale);
+          }
+          if(grid[x][y].river.includes("S")) {
+            buffer.line((i+0.5) * this.scale, (j+0.5) * this.scale, (i + 0.5) * this.scale, (j + 1) * this.scale);
+          }
+          if(grid[x][y].river.includes("E")) {
+            buffer.line((i+0.5) * this.scale, (j+0.5) * this.scale, (i + 1) * this.scale, (j + 0.5) * this.scale);
+          }
+          if(grid[x][y].river.includes("W")) {
+            buffer.line((i+0.5) * this.scale, (j+0.5) * this.scale, (i) * this.scale, (j + 0.5) * this.scale);
+          }
           buffer.pop();
         }
       }
