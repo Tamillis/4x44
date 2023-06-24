@@ -1,7 +1,7 @@
 //holds classes to do with the function of the visible board
 
-class Screen {
-  constructor(scales = [5, 10, 25, 50], dims = 50) {
+export class Screen {
+  constructor(p5, scales = [5, 10, 25, 50], dims = 50) {
     //screen coords
     this.x = 0;
     this.y = 0;
@@ -11,7 +11,8 @@ class Screen {
     this.dims = dims;
     this.border = this.scale * 4; //amount of white space around the map visible in px
     this.moveStep = 2; //amount to move per movekey in cells
-    this.buffer = createGraphics(width, height);
+    this.p5 = p5;
+    this.buffer = p5.createGraphics(p5.width, p5.height);
     this.mode = "geo";
   }
 
@@ -20,12 +21,12 @@ class Screen {
 
     //use a p5js createGraphics renderer object as an offscreen buffer
     let buffer = this.buffer;
-    buffer.textAlign(CENTER, CENTER);
+    buffer.textAlign(this.p5.CENTER, this.p5.CENTER);
     buffer.noStroke();
 
     //only render on screen tiles
-    for (let i = 0; i < width / this.scale; i++) {
-      for (let j = 0; j < height / this.scale; j++) {
+    for (let i = 0; i < this.p5.width / this.scale; i++) {
+      for (let j = 0; j < this.p5.height / this.scale; j++) {
         let x = i + this.x;
         let y = j + this.y;
         //don't try to render tiles that don't exist or don't need to be rendered
@@ -38,7 +39,7 @@ class Screen {
         //only need to redraw cells that have changed, i.e. set to active by the engine
         if (!grid[x][y].active) continue;
 
-        buffer.fill(this.renderTile(grid[x][y]));
+        buffer.fill(this.getTileFill(grid[x][y]));
 
         buffer.rect(i * this.scale, j * this.scale, this.scale, this.scale);
 
@@ -52,23 +53,32 @@ class Screen {
       }
     }
 
-    image(buffer, 0, 0);
+    this.p5.image(buffer, 0, 0);
 
     //draw highlight border
-    let { x, y } = this.pxToBoardCoords(mouseX, mouseY);
-    if (!(x < 0 || x >= BOARDSIZE || y < 0 || y >= BOARDSIZE)) {
-      push();
-      fill(0, 0, 0, 0);
-      stroke(255, 0, 0);
-      strokeWeight(2);
+    let { x, y } = this.pxToBoardCoords(this.p5.mouseX, this.p5.mouseY);
+    if (!(x < 0 || x >= this.dims || y < 0 || y >= this.dims)) {
+      this.p5.push();
+      this.p5.fill(0, 0, 0, 0);
+      this.p5.stroke(255, 0, 0);
+      this.p5.strokeWeight(2);
       x -= this.x;
       y -= this.y;
-      rect(x * this.scale, y * this.scale, this.scale, this.scale);
-      pop();
+      this.p5.rect(x * this.scale, y * this.scale, this.scale, this.scale);
+      this.p5.pop();
     }
   }
 
-  renderTile(tile) {
+  rerender(grid) {
+    for (let i = 0; i < this.dims; i++) {
+      for (let j = 0; j < this.dims; j++) {
+        grid[i][j].active = true;
+      }
+    }
+    this.draw(grid);
+  }
+
+  getTileFill(tile) {
     //the Screen renders tiles based on the screen's current mode
     const unknown = "#888";
     const ocean = "#2B65EC";
@@ -112,13 +122,13 @@ class Screen {
 
         break;
       case "water":
-        return color(30, 60, 2.55 * tile.wetVal);
+        return this.p5.color(30, 60, 2.55 * tile.wetVal);
 
       case "height":
-        return color(2.55 * tile.altVal);
+        return this.p5.color(2.55 * tile.altVal);
 
       case "temp":
-        return color(2.55 * tile.tempVal, 2.55 * tile.tempVal, 120);
+        return this.p5.color(2.55 * tile.tempVal, 2.55 * tile.tempVal, 120);
 
       case "region":
         switch (tile.region) {
@@ -155,12 +165,12 @@ class Screen {
 
   keyPressed() {
     //handle movement interactions
-    if (keyCode === LEFT_ARROW) this.x -= this.moveStep;
-    else if (keyCode === UP_ARROW) this.y -= this.moveStep;
-    else if (keyCode === DOWN_ARROW) this.y += this.moveStep;
-    else if (keyCode === RIGHT_ARROW) this.x += this.moveStep;
-    else if (key == "+") this.adjustScale(1);
-    else if (key == "-") this.adjustScale(-1);
+    if (this.p5.keyCode === this.p5.LEFT_ARROW) this.x -= this.moveStep;
+    else if (this.p5.keyCode === this.p5.UP_ARROW) this.y -= this.moveStep;
+    else if (this.p5.keyCode === this.p5.DOWN_ARROW) this.y += this.moveStep;
+    else if (this.p5.keyCode === this.p5.RIGHT_ARROW) this.x += this.moveStep;
+    else if (this.p5.key == "+") this.adjustScale(1);
+    else if (this.p5.key == "-") this.adjustScale(-1);
 
     //and correct camera position at edges
     this.checkBounds();
@@ -171,7 +181,7 @@ class Screen {
     if (this.scaleStep + step >= this.scales.length || this.scaleStep + step < 0) return;
 
     //translate
-    let { x, y } = this.pxToBoardCoords(mouseX, mouseY);
+    let { x, y } = this.pxToBoardCoords(this.p5.mouseX, this.p5.mouseY);
     this.x = x;
     this.y = y;
 
@@ -180,19 +190,19 @@ class Screen {
     this.scale = this.scales[this.scaleStep];
 
     //adjust
-    this.x -= Math.floor(width / this.scale / 2);
-    this.y -= Math.floor(height / this.scale / 2);
+    this.x -= Math.floor(this.p5.width / this.scale / 2);
+    this.y -= Math.floor(this.p5.height / this.scale / 2);
 
     this.border = this.scale * 4;
   }
 
   mousePressed() {
-    if (mouseButton === LEFT) {
+    if (this.p5.mouseButton === this.p5.LEFT) {
       //left mouse button for movement. Centre tile
 
-      let { x, y } = this.pxToBoardCoords(mouseX, mouseY);
-      this.x = x - Math.floor(width / 2 / this.scale);
-      this.y = y - Math.floor(height / 2 / this.scale);
+      let { x, y } = this.pxToBoardCoords(this.p5.mouseX, this.p5.mouseY);
+      this.x = x - Math.floor(this.p5.width / 2 / this.scale);
+      this.y = y - Math.floor(this.p5.height / 2 / this.scale);
     }
     this.checkBounds();
   }
@@ -202,11 +212,11 @@ class Screen {
     let y = this.y * this.scale;
 
     //if the game bord in px + 2 * border is less than the width or height, instead centre the screen
-    let maxBoardLength = BOARDSIZE * this.scale;
+    let maxBoardLength = this.dims * this.scale;
 
-    if (maxBoardLength < width || maxBoardLength < height) {
-      this.x = -Math.floor(((width - maxBoardLength) / 2) / this.scale);
-      this.y = -Math.floor(((height - maxBoardLength) / 2) / this.scale);
+    if (maxBoardLength < this.p5.width || maxBoardLength < this.p5.height) {
+      this.x = -Math.floor(((this.p5.width - maxBoardLength) / 2) / this.scale);
+      this.y = -Math.floor(((this.p5.height - maxBoardLength) / 2) / this.scale);
       return;
     }
 
@@ -214,17 +224,17 @@ class Screen {
 
     if (x < -this.border) this.x = toCoord(-this.border);
     if (y < -this.border) this.y = toCoord(-this.border);
-    if (x > this.dims * this.scale - width + this.border)
-      this.x = toCoord(this.dims * this.scale - width + this.border);
-    if (y > this.dims * this.scale - height + this.border)
-      this.y = toCoord(this.dims * this.scale - height + this.border);
+    if (x > this.dims * this.scale - this.p5.width + this.border)
+      this.x = toCoord(this.dims * this.scale - this.p5.width + this.border);
+    if (y > this.dims * this.scale - this.p5.height + this.border)
+      this.y = toCoord(this.dims * this.scale - this.p5.height + this.border);
   }
 
   //screen pixels to board coordinates
   pxToBoardCoords(x, y) {
     return {
-      x: floor(x / this.scale) + this.x,
-      y: floor(y / this.scale) + this.y,
+      x: Math.floor(x / this.scale) + this.x,
+      y: Math.floor(y / this.scale) + this.y,
     };
   }
 

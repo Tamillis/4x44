@@ -1,19 +1,11 @@
-//file for generic js functions used by the game / page
-function setSelectedMode(radioElementClicked) {
-    screen.mode = radioElementClicked.value;
-    rerenderBoard();
+//Some simple global functionality
+
+function randomMember(arr) {
+    return arr[Math.floor(Math.random()*arr.length)];
 }
 
-function getMode() {
-    let radioBtns = document.getElementsByName("mode");
-    let mode = "geo";
-
-    for (let btn of radioBtns) {
-        if (btn.checked) mode = btn.value;
-    }
-
-    return mode;
-}
+//setup a distance function
+let dist = (x1, y1, x2, y2) => Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
 
 class Queue {
     constructor() {

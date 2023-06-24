@@ -2,9 +2,7 @@
 <html lang="en">
   <head>
     <script src="func.js"></script>
-    <script src="p5.js"></script>
-    <script src="Game.js"></script>
-    <script src="Screen.js"></script>
+    <script type='module' src="sketch.js" defer></script>
     <link rel="stylesheet" type="text/css" href="style.css">
     <meta charset="utf-8" />
 
@@ -42,18 +40,17 @@
       </div>
 
       <div>
-        <input type="radio" id="geo" name="mode" onclick="setSelectedMode(this)" value="geo" checked class="radio">
+        <input type="radio" id="geo" name="mode" value="geo" checked class="radio">
         <label for="geo">Geo</label>
-        <input type="radio" id="water" name="mode" onclick="setSelectedMode(this)" value="water" class="radio">
+        <input type="radio" id="water" name="mode" value="water" class="radio">
         <label for="water">Water</label>
-        <input type="radio" id="temp" name="mode" onclick="setSelectedMode(this)" value="temp" class="radio">
+        <input type="radio" id="temp" name="mode" value="temp" class="radio">
         <label for="temp">Temp</label>
-        <input type="radio" id="height" name="mode" onclick="setSelectedMode(this)" value="height" class="radio">
+        <input type="radio" id="height" name="mode" value="height" class="radio">
         <label for="height">Height</label>
-        <input type="radio" id="region" name="mode" onclick="setSelectedMode(this)" value="region" class="radio">
+        <input type="radio" id="region" name="mode" value="region" class="radio">
         <label for="region">Region</label>
       </div>
     </main>
-    <script src="sketch.js"></script>
   </body>
 </html>
