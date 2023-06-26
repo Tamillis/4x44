@@ -7,6 +7,52 @@ function randomMember(arr) {
 //setup a distance function
 let dist = (x1, y1, x2, y2) => Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
 
+function floodFill(grid, i, j, prop, newVal) {
+    let oldVal = grid[i][j][prop];
+
+    if(oldVal === newVal) return;
+
+    let q = new Queue();
+
+    q.enqueue([i, j]);
+
+    while (!q.isEmpty) {
+        [i,j] = q.dequeue();
+
+        //escape border cells or if the same as the newVal
+        if (i < 0 || i >= grid.length || j < 0 || j >= grid[i].length || grid[i][j][prop] !== oldVal) continue;
+        else {
+            grid[i][j][prop] = newVal;
+            q.enqueue([i+1, j]);
+            q.enqueue([i-1, j]);
+            q.enqueue([i, j+1]);
+            q.enqueue([i, j-1]);
+        }
+    }
+}
+
+function getRandomVectorForce(forceMax = 100, forceMin = 0, forceDir = null) {
+    if(forceDir == null) forceDir = Math.random() * 2 * Math.PI;
+    let forceStr = forceMin + Math.random() * (forceMax - forceMin);
+    return { x: Math.floor(forceStr * Math.sin(forceDir)), y: Math.floor(forceStr * Math.cos(forceDir)) };
+}
+
+function smoothVals(grid, prop) {
+    let oldVals = [];
+    for (let i = 0; i < this.BOARDSIZE; i++) {
+        oldVals[i] = [];
+        for (let j = 0; j < this.BOARDSIZE; j++) {
+            oldVals[i][j] = grid[i][j][prop];
+        }
+    }
+
+    for (let i = 1; i < this.BOARDSIZE - 1; i++) {
+        for (let j = 1; j < this.BOARDSIZE - 1; j++) {
+            grid[i][j][prop] = Math.floor((oldVals[i][j] + oldVals[i - 1][j] + oldVals[i + 1][j] + oldVals[i - 1][j + 1] + oldVals[i][j - 1]) / 5);
+        }
+    }
+}
+
 class Queue {
     constructor() {
         this.head = 0;

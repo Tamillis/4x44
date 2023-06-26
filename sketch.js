@@ -145,7 +145,7 @@ let game = (s) => {
   s.resetBoard = function () {
     worldGenerator = new WorldGenerator(worldParams, BOARDSIZE, s.noise, s.noiseSeed);
     board.grid = worldGenerator.genGrid(board.grid);
-    board.wind = worldGenerator.getVectorForce(100, 50);
+    board.wind = getRandomVectorForce(100, 50);
   }
 
   s.getMode = function() {

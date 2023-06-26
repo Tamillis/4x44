@@ -16,9 +16,9 @@
       "mountains": "mountains"
     },
     "ridges" : {
-      "smoothing" : 6,
-      "driftForceMax" : 15,
-      "driftForceMin" : 5
+      "smoothing" : 5,
+      "driftForceMax" : 25,
+      "driftForceMin" : 15
     },
     "wets" : {
       "desert": "desert",

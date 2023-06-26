@@ -16,19 +16,13 @@ export class WorldGenerator {
         });
     }
 
-    getVectorForce(forceMax = 100, forceMin = 0) {
-        let forceDir = Math.random() * 2 * Math.PI;
-        let forceStr = forceMin + Math.random() * (forceMax - forceMin);
-        return { x: Math.floor(forceStr * Math.sin(forceDir)), y: Math.floor(forceStr * Math.cos(forceDir)) };
-    }
-
     genGrid(grid) {
         //generate regions from continent generator sketch
         let regionGen = new RegionGenerator(this.BOARDSIZE, this.BOARDSIZE, this.regions);
         regionGen.debug = debug;
         regionGen.createRegions();
 
-        //generate initial tile data from perlin noise & latitude and wind
+        //generate initial tile data
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
                 let tile = new Tile(i, j);
@@ -39,9 +33,10 @@ export class WorldGenerator {
             }
         }
 
-        console.log("initial tile data done");
+        //TODO convert all console logs to watcher messager events
+        console.log("initial tile data and regions done");
 
-        //altitude
+        //altitude - initially just perlin noise and a distance from the centre
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
                 let tile = grid[i][j];
@@ -57,7 +52,7 @@ export class WorldGenerator {
 
         //adjust heights by generating ridges and troughs from regions and smoothing them out, using it as a mask
         let regionDriftForces = {};
-        for (let i = 0; i < this.regions; i++) regionDriftForces[i + 1] = this.getVectorForce(this.ridges.driftForceMax, this.ridges.driftForceMin);
+        for (let i = 0; i < this.regions; i++) regionDriftForces[i + 1] = getRandomVectorForce(this.ridges.driftForceMax, this.ridges.driftForceMin);
 
         //only for tiles that have neighbours
         for (let i = 1; i < this.BOARDSIZE - 1; i++) {
@@ -82,7 +77,7 @@ export class WorldGenerator {
         }
 
         //and smooth
-        for (let i = 0; i < this.ridges.smoothing; i++) this.smoothVals(grid, "ridgeAlt");
+        for (let i = 0; i < this.ridges.smoothing; i++) smoothVals(grid, "ridgeAlt");
 
         //scale ridgeAlt values from shallowest-tallest to 0-100
         let tallestRidge = 0, shallowestTrough = 0;
@@ -164,7 +159,8 @@ export class WorldGenerator {
             }
         }
 
-        // TODO set outside water to saltwater with a floodfill algorithm
+        // set outside water to saltwater with a floodfill algorithm
+        floodFill(grid, 0, 0, "water", "saltwater");
 
         //process tiles using neighbouring information
         for (let i = 0; i < this.BOARDSIZE; i++) {
@@ -273,22 +269,6 @@ export class WorldGenerator {
         else return false;
     }
 
-    smoothVals(grid, value) {
-        let oldVals = [];
-        for (let i = 0; i < this.BOARDSIZE; i++) {
-            oldVals[i] = [];
-            for (let j = 0; j < this.BOARDSIZE; j++) {
-                oldVals[i][j] = grid[i][j][value];
-            }
-        }
-
-        for (let i = 1; i < this.BOARDSIZE - 1; i++) {
-            for (let j = 1; j < this.BOARDSIZE - 1; j++) {
-                grid[i][j][value] = Math.floor((oldVals[i][j] + oldVals[i - 1][j] + oldVals[i + 1][j] + oldVals[i - 1][j + 1] + oldVals[i][j - 1]) / 5);
-            }
-        }
-    }
-
     getNeighbouringTileCoords(i, j) {
         //selects current tile if at the edge/corner
 
@@ -336,8 +316,8 @@ export class WorldGenerator {
         else if (tile.tempVal < this.temps.warmLevel) tile.temp = this.temps.warm;
         else tile.temp = this.temps.hot;
 
-        //set freshwater lake tiles, TODO: assume freshwater initially with a sea-water flood-fill pass coming after, meaning sealevel lakes can be freshwater too
-        if (tile.alt == "deepsea" || tile.alt == "sea") tile.water = this.waters.saltwater;
+        //set freshwater lake tiles, assume freshwater initially with a sea-water flood-fill pass coming after, meaning sealevel lakes can be freshwater too
+        if (tile.alt == "deepsea" || tile.alt == "sea") tile.water = this.waters.freshwater;
         else if (tile.coastal) {
             //do nothing
         }
@@ -355,8 +335,7 @@ export class WorldGenerator {
         }
 
         //set pure river water sources
-        if (tile.alt == "deepsea" || tile.alt == "sea") tile.water = this.waters.saltwater;
-        else if (tile.water == "freshwater" || tile.water == "saltwater" || tile.coastal) {
+        if (tile.water == "freshwater" || tile.water == "saltwater" || tile.coastal) {
             // do nothing for tiles already water
         }
         else if ((tile.wet == "desert") & (Math.random() < this.hydration / 8)) {
