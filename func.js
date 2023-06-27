@@ -1,7 +1,7 @@
 //Some simple global functionality
 
 function randomMember(arr) {
-    return arr[Math.floor(Math.random()*arr.length)];
+    return arr[Math.floor(Utils.rnd()*arr.length)];
 }
 
 //setup a distance function
@@ -32,8 +32,8 @@ function floodFill(grid, i, j, prop, newVal) {
 }
 
 function getRandomVectorForce(forceMax = 100, forceMin = 0, forceDir = null) {
-    if(forceDir == null) forceDir = Math.random() * 2 * Math.PI;
-    let forceStr = forceMin + Math.random() * (forceMax - forceMin);
+    if(forceDir == null) forceDir = Utils.rnd() * 2 * Math.PI;
+    let forceStr = forceMin + Utils.rnd() * (forceMax - forceMin);
     return { x: Math.floor(forceStr * Math.sin(forceDir)), y: Math.floor(forceStr * Math.cos(forceDir)) };
 }
 
@@ -57,6 +57,23 @@ function highestTileVal(tiles, prop) {
     let highest = tiles[0][prop];
     for(let i = 1; i < tiles.length; i++) if(tiles[i][prop] > highest) highest = tiles[i][prop];
     return highest;
+}
+
+function cancelSubmit(e) {
+    e.preventDefault();
+    return false;
+}
+
+class Utils {
+    static seed = 0;
+    static rnd(upperBound = 1, lowerBound = 0) {
+        if (Array.isArray(upperBound)) return this.randomMember(upperBound);
+        return Math.random(this.seed++) * (upperBound - lowerBound);
+    }
+
+    static randomMember(arr) {
+        return arr[Math.floor(Math.random(this.seed++)*arr.length)];
+    }
 }
 
 class Queue {

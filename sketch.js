@@ -144,6 +144,10 @@ let game = (s) => {
   }
 
   s.resetBoard = function () {
+    let seed = Number(document.getElementById("seed").value);
+    Utils.seed = seed == NaN ? Utils.rnd() : seed;
+    console.log(seed);
+
     worldGenerator = new WorldGenerator(worldParams, BOARDSIZE, s.noise, s.noiseSeed);
     board.grid = worldGenerator.genGrid(board.grid);
     board.wind = getRandomVectorForce(100, 50);

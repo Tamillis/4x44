@@ -9,7 +9,7 @@ export class WorldGenerator {
         this.BOARDSIZE = BOARDSIZE;
         this.noise = noise;
         this.noiseSeed = noiseSeed;
-        this.noiseProfiles = [Math.random() * 100, Math.random() * 100, Math.random() * 100];
+        this.noiseProfiles = [Utils.rnd(100), Utils.rnd(100), Utils.rnd(100)];
 
         this.riverMaker = new RiverMaker(params, this.getNeighbouringTiles);
 
@@ -130,33 +130,33 @@ export class WorldGenerator {
                 let tile = grid[i][j];
                 //assume freshwater initially with a sea-water flood-fill pass coming after
                 if (tile.altVal < this.alts.seaLevel) tile.water = this.waters.freshwater;
-                else if (tile.alt == this.alts.mountains) {
+                else if (tile.alt >= this.alts.highlandsLevel) {
                     //do nothing, stops lakes from being next to the sea or on a mountain
                 }
-                else if ((tile.wet == "desert") & (Math.random() < this.hydration / 4)) {
+                else if ((tile.wet == "desert") & (Utils.rnd() < this.hydration / 4)) {
                     tile.water = "freshwater";
                     tile.waterSource = true;
                 }
-                else if ((tile.wet == "dry") & (Math.random() < this.hydration / 2)) {
+                else if ((tile.wet == "dry") & (Utils.rnd() < this.hydration / 2)) {
                     tile.water = "freshwater";
                     tile.waterSource = true;
                 }
-                else if ((tile.wet == "wet") & (Math.random() < this.hydratrion)) {
+                else if ((tile.wet == "wet") & (Utils.rnd() < this.hydratrion)) {
                     tile.water = "freshwater";
                     tile.waterSource = true;
                 }
 
                 //set water sources
-                if (tile.water == "freshwater" || tile.water == "saltwater" || tile.coastal || tile.alt == this.alts.mountains) {
-                    // do nothing for tile's already water
+                if (tile.water == "freshwater" || tile.water == "saltwater" || tile.alt >= this.alts.highlandsLevel) {
+                    // do nothing for tile's already water or a mountain
                 }
-                else if ((tile.wet == "desert") & (Math.random() < this.hydration / 8)) {
+                else if ((tile.wet == "desert") & (Utils.rnd() < this.hydration / 8)) {
                     tile.waterSource = true;
                 }
-                else if ((tile.wet == "dry") & (Math.random() < this.hydration / 4)) {
+                else if ((tile.wet == "dry") & (Utils.rnd() < this.hydration / 4)) {
                     tile.waterSource = true;
                 }
-                else if ((tile.wet == "wet") & (Math.random() < this.hydratrion / 2)) {
+                else if ((tile.wet == "wet") & (Utils.rnd() < this.hydratrion / 2)) {
                     tile.waterSource = true;
                 }
             }
@@ -208,9 +208,10 @@ export class WorldGenerator {
                     noise(i * this.roughness, j * this.roughness) * 50);
                 */
 
-                let temp = Math.floor(20 + j * 35 / this.BOARDSIZE + (this.noise(i * this.roughness, j * this.roughness) * 50) - Math.pow(tile.altVal - this.alts.seaLevel, 2) / 35);
-                //make sea tiles warmer
-                if (tile.altVal < this.alts.seaLevel) temp += 10;
+                let distAboveSea = tile.altVal - this.alts.seaLevel;
+                if (distAboveSea < 0) distAboveSea = 0;
+                let temp = Math.floor(20 + j * 35 / this.BOARDSIZE + (this.noise(i * this.roughness, j * this.roughness) * 50) - distAboveSea * distAboveSea / 35);
+
                 tile.tempVal = temp;
             }
         }
@@ -264,7 +265,7 @@ export class WorldGenerator {
                     grid[i][j].water == false &&
                     grid[i][j].alt !== "mountain" &&
                     grid[i][j].wet !== "desert" &&
-                    Math.random() < this.forestation
+                    Utils.rnd() < this.forestation
                 ) {
                     grid[i][j].forest = this.assignForest(grid[i][j]);
                 }
@@ -441,7 +442,7 @@ export class RegionGenerator {
         //pick starting positions, checking for overlap
 
         //create the starts array with the first index already done
-        let starts = [[Math.floor(Math.random() * this.width), Math.floor(Math.random() * this.height)]];
+        let starts = [[Math.floor(Utils.rnd() * this.width), Math.floor(Utils.rnd() * this.height)]];
 
         //loop from 1 (since first index is already set)
         for (let n = 1; n < this.totalRegions; n++) {
@@ -457,8 +458,8 @@ export class RegionGenerator {
                 overlap = false;
 
                 //generate new start coordinates
-                let x = Math.floor(Math.random() * this.width);
-                let y = Math.floor(Math.random() * this.height);
+                let x = Math.floor(Utils.rnd() * this.width);
+                let y = Math.floor(Utils.rnd() * this.height);
 
                 //loop through existing starts array
                 for (let i = 0; i < starts.length; i++) {
@@ -510,7 +511,7 @@ export class RegionGenerator {
             //to wrap around the left-right edges, use three calcs:
             //The current one, one at plus world width and one at minus world width
             //and introduce some variation to the otherwise straight lines
-            let noise = Math.random() * 2 * this.noiseFactor - this.noiseFactor;
+            let noise = Utils.rnd() * 2 * this.noiseFactor - this.noiseFactor;
             let d0 = dist(i, j, startPositionX, startPositionY) + noise;
             let dLeft =
                 dist(i, j, startPositionX - this.width, startPositionY) + noise;
