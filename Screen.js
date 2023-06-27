@@ -15,6 +15,19 @@ export class Screen {
     this.buffer = p5.createGraphics(p5.width, p5.height);
     this.mode = "geo";
     this.priorMode = "geo";
+
+    this.unknown = "#888";
+    this.ocean = "#2B65EC";
+    this.deepocean = "#204FBD";
+    this.sand = "#C2B280";
+    this.grass = "#7CFC00";
+    this.hills = "#8C8F56";
+    this.woods = "#2A7E19";
+    this.rock = "#5A4D41";
+    this.ice = "#A5F2F3";
+    this.river = "#00CAF1";
+    this.snow = "#fffafa";
+    this.jungle = "#29ab46";
   }
 
   draw(grid) {
@@ -44,34 +57,8 @@ export class Screen {
         buffer.fill(this.getTileFill(grid[x][y]));
         buffer.rect(i * this.scale, j * this.scale, this.scale, this.scale);
 
-        //draw hills line
-        if (grid[x][y].hilly && this.mode == "geo" && grid[x][y].coastal !== "cliffs") {
-          buffer.push();
-          buffer.strokeWeight(1);
-          buffer.stroke(0);
-          buffer.line(i * this.scale, j * this.scale, (i + 1) * this.scale, (j + 1) * this.scale);
-          buffer.pop();
-        }
-
-        //draw river lines
-        if (grid[x][y].river && this.mode == "geo") {
-          buffer.push();
-          buffer.strokeWeight(2);
-          buffer.stroke(0,0,255);
-          if(grid[x][y].river.includes("N")) {
-            buffer.line((i+0.5) * this.scale, j * this.scale, (i + 0.5) * this.scale, (j + 0.5) * this.scale);
-          }
-          if(grid[x][y].river.includes("S")) {
-            buffer.line((i+0.5) * this.scale, (j+0.5) * this.scale, (i + 0.5) * this.scale, (j + 1) * this.scale);
-          }
-          if(grid[x][y].river.includes("E")) {
-            buffer.line((i+0.5) * this.scale, (j+0.5) * this.scale, (i + 1) * this.scale, (j + 0.5) * this.scale);
-          }
-          if(grid[x][y].river.includes("W")) {
-            buffer.line((i+0.5) * this.scale, (j+0.5) * this.scale, (i) * this.scale, (j + 0.5) * this.scale);
-          }
-          buffer.pop();
-        }
+        //below are special draw calls for geo mode only
+        if (this.mode == "geo") this.drawGeoFeatures(buffer, grid[x][y], i, j);
       }
     }
 
@@ -88,6 +75,46 @@ export class Screen {
       y -= this.y;
       this.p5.rect(x * this.scale, y * this.scale, this.scale, this.scale);
       this.p5.pop();
+    }
+  }
+
+  drawGeoFeatures(buffer, tile, i, j) {   
+    //draw hills line
+    if (tile.hilly && tile.coastal !== "cliffs") {
+      buffer.push();
+      buffer.strokeWeight(1);
+      buffer.stroke(0);
+      buffer.line(i * this.scale, j * this.scale, (i + 1) * this.scale, (j + 1) * this.scale);
+      buffer.pop();
+    }
+
+    //draw river lines
+    if (tile.river) {
+      buffer.push();
+      buffer.strokeWeight(2);
+      buffer.stroke(this.river);
+      if (tile.river.includes("N")) {
+        buffer.line((i + 0.5) * this.scale, j * this.scale, (i + 0.5) * this.scale, (j + 0.5) * this.scale);
+      }
+      if (tile.river.includes("S")) {
+        buffer.line((i + 0.5) * this.scale, (j + 0.5) * this.scale, (i + 0.5) * this.scale, (j + 1) * this.scale);
+      }
+      if (tile.river.includes("E")) {
+        buffer.line((i + 0.5) * this.scale, (j + 0.5) * this.scale, (i + 1) * this.scale, (j + 0.5) * this.scale);
+      }
+      if (tile.river.includes("W")) {
+        buffer.line((i + 0.5) * this.scale, (j + 0.5) * this.scale, (i) * this.scale, (j + 0.5) * this.scale);
+      }
+      buffer.pop();
+    }
+
+    //draw water source
+    if (tile.waterSource) {
+      buffer.push();
+      buffer.strokeWeight(8);
+      buffer.stroke(this.river);
+      buffer.point((i+0.5)*this.scale, (j+0.5)*this.scale);
+      buffer.pop();
     }
   }
 
@@ -153,36 +180,55 @@ export class Screen {
         return this.p5.color(2.55 * tile.tempVal, 2.55 * tile.tempVal, 120);
 
       case "region":
-        switch (tile.region) {
-          case 1:
-            return unknown;
-          case 2:
-            return ocean;
-          case 3:
-            return deepocean;
-          case 4:
-            return sand;
-          case 5:
-            return grass;
-          case 6:
-            return hills;
-          case 7:
-            return woods;
-          case 8:
-            return rock;
-          case 9:
-            return ice;
-          case 10:
-            return river;
-          case 11:
-            return snow;
-          case 12:
-            return jungle;
-        }
+        return this.renderById(tile.region);
 
-        break;
+      case "landregion":
+        if (tile.water) {
+          if (tile.water == "freshwater") return river;
+          else if (tile.alt == "sea") return ocean;
+          else return deepocean;
+        }
+        else {
+          return this.renderById(tile.region);
+        }
     }
     return grass;
+  }
+
+  renderById(id) {
+    const unknown = "#888";
+    const sand = "#C2B280";
+    const grass = "#7CFC00";
+    const hills = "#8C8F56";
+    const woods = "#2A7E19";
+    const rock = "#5A4D41";
+    const ice = "#A5F2F3";
+    const river = "#00CAF1";
+    const snow = "#fffafa";
+    const jungle = "#29ab46";
+
+    switch (id) {
+      case 1:
+        return unknown;
+      case 2:
+        return snow;
+      case 3:
+        return jungle;
+      case 4:
+        return sand;
+      case 5:
+        return grass;
+      case 6:
+        return hills;
+      case 7:
+        return woods;
+      case 8:
+        return rock;
+      case 9:
+        return ice;
+      case 10:
+        return river;
+    }
   }
 
   keyPressed() {

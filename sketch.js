@@ -75,10 +75,13 @@ let game = (s) => {
     debugData.wet = board.grid[x][y].wet + " - " + board.grid[x][y].wetVal;
     debugData.temp = board.grid[x][y].temp + " - " + board.grid[x][y].tempVal;
     debugData.water = board.grid[x][y].water;
-    debugData.forest = board.grid[x][y].forest;
-    debugData.coastal = board.grid[x][y].coastal;
+    debugData.waterSource = board.grid[x][y].waterSource;
+    debugData.river = board.grid[x][y].river;
+    debugData.riverId = board.grid[x][y].riverId;
+    //debugData.forest = board.grid[x][y].forest;
+    //debugData.coastal = board.grid[x][y].coastal;
     debugData.region = board.grid[x][y].region;
-    debugData.hilly = board.grid[x][y].hilly;
+    //debugData.hilly = board.grid[x][y].hilly;
   }
 
   s.drawDebugBox = function () {
@@ -126,8 +129,6 @@ let game = (s) => {
       screen.keyPressed();
       screen.rerender(board.grid);
     }
-
-
   }
 
   s.mousePressed = function (e) {

@@ -1,5 +1,5 @@
 //responsible for how the world is generated, constuctor takes in parameters used to tweak generation
-
+import { RiverMaker } from "./riverMaker.js";
 export class WorldGenerator {
     constructor(params, BOARDSIZE, noise, noiseSeed) {
         //load world generator information
@@ -10,6 +10,8 @@ export class WorldGenerator {
         this.noise = noise;
         this.noiseSeed = noiseSeed;
         this.noiseProfiles = [Math.random() * 100, Math.random() * 100, Math.random() * 100];
+
+        this.riverMaker = new RiverMaker(params, this.getNeighbouringTiles);
 
         Object.keys(params).forEach(k => {
             this[k] = params[k];
@@ -103,6 +105,91 @@ export class WorldGenerator {
 
         console.log("ridges calculated and applied");
 
+        //wetness
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                let tile = grid[i][j];
+                this.noiseSeed(this.noiseProfiles[1]);
+                //made water distribution have less roughness than land because seems right
+                let wet = Math.floor(this.noise(i * this.roughness * 0.8, j * this.roughness * 0.8) * 100);
+                tile.wetVal = wet;
+            }
+        }
+
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                this.setTileWetType(grid[i][j]);
+            }
+        }
+
+        console.log("wet data done");
+
+        //set waters
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                let tile = grid[i][j];
+                //assume freshwater initially with a sea-water flood-fill pass coming after
+                if (tile.altVal < this.alts.seaLevel) tile.water = this.waters.freshwater;
+                else if (tile.alt == this.alts.mountains) {
+                    //do nothing, stops lakes from being next to the sea or on a mountain
+                }
+                else if ((tile.wet == "desert") & (Math.random() < this.hydration / 4)) {
+                    tile.water = "freshwater";
+                    tile.waterSource = true;
+                }
+                else if ((tile.wet == "dry") & (Math.random() < this.hydration / 2)) {
+                    tile.water = "freshwater";
+                    tile.waterSource = true;
+                }
+                else if ((tile.wet == "wet") & (Math.random() < this.hydratrion)) {
+                    tile.water = "freshwater";
+                    tile.waterSource = true;
+                }
+
+                //set water sources
+                if (tile.water == "freshwater" || tile.water == "saltwater" || tile.coastal || tile.alt == this.alts.mountains) {
+                    // do nothing for tile's already water
+                }
+                else if ((tile.wet == "desert") & (Math.random() < this.hydration / 8)) {
+                    tile.waterSource = true;
+                }
+                else if ((tile.wet == "dry") & (Math.random() < this.hydration / 4)) {
+                    tile.waterSource = true;
+                }
+                else if ((tile.wet == "wet") & (Math.random() < this.hydratrion / 2)) {
+                    tile.waterSource = true;
+                }
+            }
+        }
+
+        //finally set water tiles to wet 100
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                grid[i][j].wetVal = grid[i][j].water ? 100 : grid[i][j].wetVal;
+            }
+        }
+
+        // set outside water to saltwater with a floodfill algorithm
+        floodFill(grid, 0, 0, "water", "saltwater");
+
+        console.log("Waters set")
+
+        //run rivers
+        this.riverMaker.makeRivers(grid);
+
+        console.log("rivers run");
+
+        //to help smooth out those sharp river valleys a little.
+        //smoothVals(grid, "altVal");
+
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                this.setTileAltType(grid[i][j]);
+            }
+        }
+
+        console.log("Altitudes finalised");
+
         //temperature
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
@@ -128,39 +215,13 @@ export class WorldGenerator {
             }
         }
 
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                this.setTileTempType(grid[i][j]);
+            }
+        }
+
         console.log("temp data done");
-
-        //wetness
-        for (let i = 0; i < this.BOARDSIZE; i++) {
-            for (let j = 0; j < this.BOARDSIZE; j++) {
-                let tile = grid[i][j];
-                this.noiseSeed(this.noiseProfiles[1]);
-                //made water distribution have less roughness than land because seems right
-                let wet = Math.floor(this.noise(i * this.roughness * 0.8, j * this.roughness * 0.8) * 100);
-                tile.wetVal = wet;
-            }
-        }
-
-        console.log("wet data done");
-
-        //now that alt, wet and temp values are all sorted, tile types can properly be assigned
-        for (let i = 0; i < this.BOARDSIZE; i++) {
-            for (let j = 0; j < this.BOARDSIZE; j++) {
-                this.setTileType(grid[i][j]);
-            }
-        }
-
-        console.log("tile types set")
-
-        //finally set water tiles to wet 100
-        for (let i = 0; i < this.BOARDSIZE; i++) {
-            for (let j = 0; j < this.BOARDSIZE; j++) {
-                grid[i][j].wetVal = grid[i][j].water ? 100 : grid[i][j].wetVal;
-            }
-        }
-
-        // set outside water to saltwater with a floodfill algorithm
-        floodFill(grid, 0, 0, "water", "saltwater");
 
         //process tiles using neighbouring information
         for (let i = 0; i < this.BOARDSIZE; i++) {
@@ -195,6 +256,21 @@ export class WorldGenerator {
 
         console.log("coastal tiles and hills done");
 
+        //Forestation
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                //set forestation
+                if (
+                    grid[i][j].water == false &&
+                    grid[i][j].alt !== "mountain" &&
+                    grid[i][j].wet !== "desert" &&
+                    Math.random() < this.forestation
+                ) {
+                    grid[i][j].forest = this.assignForest(grid[i][j]);
+                }
+            }
+        }
+
         //do a game of life pass on wether tiles are forested
         let forestAdjustments = [];
         for (let i = 0; i < this.BOARDSIZE; i++) {
@@ -219,15 +295,6 @@ export class WorldGenerator {
         }
 
         console.log("forests adjusted");
-
-        //run rivers
-        for (let i = 0; i < this.BOARDSIZE; i++) {
-            for (let j = 0; j < this.BOARDSIZE; j++) {
-                if (grid[i][j].waterSource) this.runRiver(grid, grid[i][j]);
-            }
-        }
-
-        console.log("rivers run");
 
         //check world meets this.reqs
         console.log("checking reqs");
@@ -257,7 +324,7 @@ export class WorldGenerator {
             hillRatio < this.reqs.minHillRatio ||
             hillRatio > this.reqs.maxHillRatio) {
             if (debug) console.warn("Regen-ing");
-            grid = this.genGrid(grid);
+            //grid = this.genGrid(grid);
         }
 
         return grid;
@@ -288,10 +355,10 @@ export class WorldGenerator {
         if (tile.y - 1 >= 0) neighbours.push(grid[tile.x][tile.y - 1]);
 
         //right neighbour
-        if (tile.x + 1 < this.BOARDSIZE) neighbours.push(grid[tile.x + 1][tile.y]);
+        if (tile.x + 1 < grid.length) neighbours.push(grid[tile.x + 1][tile.y]);
 
         //bottom neighbour
-        if (tile.y + 1 < this.BOARDSIZE) neighbours.push(grid[tile.x][tile.y + 1]);
+        if (tile.y + 1 < grid.length) neighbours.push(grid[tile.x][tile.y + 1]);
 
         //left neighbour
         if (tile.x - 1 >= 0) neighbours.push(grid[tile.x - 1][tile.y]);
@@ -299,109 +366,26 @@ export class WorldGenerator {
         return neighbours;
     }
 
-    setTileType(tile) {
+    setTileAltType(tile) {
         if (tile.altVal < this.alts.deepseaLevel) tile.alt = this.alts.deepsea;
         else if (tile.altVal < this.alts.seaLevel) tile.alt = this.alts.sea;
         else if (tile.altVal < this.alts.lowlandsLevel) tile.alt = this.alts.lowlands;
         else if (tile.altVal < this.alts.highlandsLevel) tile.alt = this.alts.highlands;
         else tile.alt = this.alts.mountains;
+    }
 
+    setTileWetType(tile) {
         if (tile.wetVal < this.wets.desertLevel) tile.wet = this.wets.desert;
         else if (tile.wetVal < this.wets.dryLevel) tile.wet = this.wets.dry;
         else tile.wet = this.wets.wet;
+    }
 
+    setTileTempType(tile) {
         if (tile.tempVal < this.temps.frozenLevel) tile.temp = this.temps.frozen;
         else if (tile.tempVal < this.temps.coldLevel) tile.temp = this.temps.cold;
         else if (tile.tempVal < this.temps.mildLevel) tile.temp = this.temps.mild;
         else if (tile.tempVal < this.temps.warmLevel) tile.temp = this.temps.warm;
         else tile.temp = this.temps.hot;
-
-        //set freshwater lake tiles, assume freshwater initially with a sea-water flood-fill pass coming after, meaning sealevel lakes can be freshwater too
-        if (tile.alt == "deepsea" || tile.alt == "sea") tile.water = this.waters.freshwater;
-        else if (tile.coastal) {
-            //do nothing
-        }
-        else if ((tile.wet == "desert") & (Math.random() < this.hydration / 4)) {
-            tile.water = "freshwater";
-            tile.waterSource = true;
-        }
-        else if ((tile.wet == "dry") & (Math.random() < this.hydration / 2)) {
-            tile.water = "freshwater";
-            tile.waterSource = true;
-        }
-        else if ((tile.wet == "wet") & (Math.random() < this.hydratrion)) {
-            tile.water = "freshwater";
-            tile.waterSource = true;
-        }
-
-        //set pure river water sources
-        if (tile.water == "freshwater" || tile.water == "saltwater" || tile.coastal) {
-            // do nothing for tiles already water
-        }
-        else if ((tile.wet == "desert") & (Math.random() < this.hydration / 8)) {
-            tile.waterSource = true;
-        }
-        else if ((tile.wet == "dry") & (Math.random() < this.hydration / 4)) {
-            tile.waterSource = true;
-        }
-        else if ((tile.wet == "wet") & (Math.random() < this.hydratrion / 2)) {
-            tile.waterSource = true;
-        }
-
-        //set forestation
-        if (
-            tile.water == false &&
-            tile.alt !== "mountain" &&
-            tile.wet !== "desert" &&
-            Math.random() < this.forestation
-        ) {
-            tile.forest = this.assignForest(tile);
-        }
-    }
-
-    runRiver(grid, currTile) {
-        //initially called because tile is a water source
-
-        //get neighbour tiles that are lower than the current river endpoint tile
-        let nbrs = this.getNeighbouringTiles(currTile, grid);
-        let lowerNbrs = nbrs.filter(t => t.altVal < currTile.altVal);
-
-        //if no neighbouring tiles are lower, convert this tile to a freshwater square and return
-        if (lowerNbrs.length == 0) {
-            currTile.water = this.waters.freshwater;
-            currTile.river = false;
-            return;
-        }
-
-        //choose one randomly
-        let nextTile = randomMember(lowerNbrs);
-
-        //flow toward it
-        if(currTile.water || currTile.temp == this.temps.frozen) {
-            //do nothing
-        }
-        else if (nextTile.x < currTile.x) currTile.river += "W";
-        else if (nextTile.x > currTile.x) currTile.river += "E";
-        else if (nextTile.y < currTile.y) currTile.river += "N";
-        else if (nextTile.y > currTile.y) currTile.river += "S";
-
-        //if next tile is water, return out
-        if (nextTile.water) return;
-        
-        //if nextTile is already a river tile flag
-        let nextTileIsRiver = nextTile.river ? true : false;
-
-        //set that tile to river too, flow from currTile
-        if (nextTile.x < currTile.x) nextTile.river += "E";
-        else if (nextTile.x > currTile.x) nextTile.river += "W";
-        else if (nextTile.y < currTile.y) nextTile.river += "S";
-        else if (nextTile.y > currTile.y) nextTile.river += "N";
-
-        //if nextTile is already a river, can just return out
-        if (nextTileIsRiver) return;
-
-        //call run river on the new tile
-        this.runRiver(grid, nextTile);
     }
 }
 
@@ -656,6 +640,7 @@ class Tile {
         this.coastal = false;
         this.hilly = false;
         this.river = ""; //other values are strings containing "N" "E" "S" "W", denoting how to render the river
+        this.riverId = 0;   //so rivers cannot flow back onto themselves. 0 is not a river
 
         //game engine properties
         this.id = "x";

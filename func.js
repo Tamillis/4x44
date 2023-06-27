@@ -39,18 +39,24 @@ function getRandomVectorForce(forceMax = 100, forceMin = 0, forceDir = null) {
 
 function smoothVals(grid, prop) {
     let oldVals = [];
-    for (let i = 0; i < this.BOARDSIZE; i++) {
+    for (let i = 0; i < grid.length; i++) {
         oldVals[i] = [];
-        for (let j = 0; j < this.BOARDSIZE; j++) {
+        for (let j = 0; j < grid[i].length; j++) {
             oldVals[i][j] = grid[i][j][prop];
         }
     }
 
-    for (let i = 1; i < this.BOARDSIZE - 1; i++) {
-        for (let j = 1; j < this.BOARDSIZE - 1; j++) {
+    for (let i = 1; i < grid.length - 1; i++) {
+        for (let j = 1; j < grid[i].length - 1; j++) {
             grid[i][j][prop] = Math.floor((oldVals[i][j] + oldVals[i - 1][j] + oldVals[i + 1][j] + oldVals[i - 1][j + 1] + oldVals[i][j - 1]) / 5);
         }
     }
+}
+
+function highestTileVal(tiles, prop) {
+    let highest = tiles[0][prop];
+    for(let i = 1; i < tiles.length; i++) if(tiles[i][prop] > highest) highest = tiles[i][prop];
+    return highest;
 }
 
 class Queue {
