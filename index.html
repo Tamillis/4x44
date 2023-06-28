@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <script src="func.js"></script>
+    <script src="func.js" defer></script>
     <script type='module' src="sketch.js" defer></script>
+    
     <link rel="stylesheet" type="text/css" href="style.css">
     <meta charset="utf-8" />
 
@@ -27,7 +28,7 @@
   <body>
     <main id="main">
       <form onsubmit="cancelSubmit()">
-        <input type="number" placeholder="Enter seed..." id="seed">
+        <input type="text" placeholder="Enter seed..." id="seed">
       </form>
 
       <p id="framerate">LOADING GAME</p>

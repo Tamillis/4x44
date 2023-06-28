@@ -5,6 +5,10 @@ import "./p5.js";
 
 //can a simple web based 4x game be made that's finishable in 44 minutes? Let's call that 50 'turns'
 
+Utils.init();
+
+console.log(Utils.rnd());
+
 let game = (s) => {
   let debugData = {};
   let debug = false;
@@ -144,10 +148,7 @@ let game = (s) => {
   }
 
   s.resetBoard = function () {
-    let seed = Number(document.getElementById("seed").value);
-    Utils.seed = seed == NaN ? Utils.rnd() : seed;
-    console.log(seed);
-
+    Utils.init();
     worldGenerator = new WorldGenerator(worldParams, BOARDSIZE, s.noise, s.noiseSeed);
     board.grid = worldGenerator.genGrid(board.grid);
     board.wind = getRandomVectorForce(100, 50);
