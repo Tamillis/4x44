@@ -23,30 +23,39 @@ export class RiverMaker {
 
     runRiver(currTile, grid) {
         currTile.riverId = this.nextRiverId;
-        //get neighbour tiles that are lower than the current river endpoint tile
+        //get neighbour tiles 
         let nbrs = this.getNeighbouringTiles(currTile, grid);
         //but ignore ones that have the same river id
-        nbrs = nbrs.filter(t => t.riverId !== currTile.riverId);
+        let notThisRiverNbrs = nbrs.filter(t => t.riverId !== currTile.riverId);
 
-        //if nbrs is empty, all neighbouring tiles are of the same river. Convert currTile to lake.
-        if (nbrs.length == 0) {
-            currTile.water == this.waters.freshwater;
+        //if nbrs is empty, all neighbouring tiles are of the same river. Convert currTile to water.
+        if (notThisRiverNbrs.length == 0) {
+            //if next to saltwater, be saltwater
+            let isNextToSea = false;
+            nbrs.forEach(n => isNextToSea = n.altVal < this.alts.seaLevel || isNextToSea);
+
+            if(isNextToSea) currTile.water = this.waters.saltwater;
+            else currTile.water = this.waters.freshwater;
+
             return;
         }
-        let lowerNbrs = nbrs.filter(t => t.altVal < currTile.altVal);
 
-        //if no neighbouring tiles are lower, cut lowest neighbouring tile to 1 less currTile.altVal
+        //filter nbrs that are lower than the current river endpoint tile
+        let lowerNbrs = notThisRiverNbrs.filter(t => t.altVal < currTile.altVal);
+
+        //if no neighbouring tiles are lower, cut lowest neighbouring tile to currTile.altVal
         if (lowerNbrs.length == 0) {
-            let lowestNbr = nbrs.reduce((lowestTileSoFar, nextTile) => nextTile.altVal < lowestTileSoFar.altVal ? nextTile : lowestTileSoFar);
+            let lowestNbr = notThisRiverNbrs.reduce((lowestTileSoFar, nextTile) => nextTile.altVal < lowestTileSoFar.altVal ? nextTile : lowestTileSoFar);
 
-            lowestNbr.altVal = currTile.altVal - 1;
+            //sometimes the alt is stepped down, cutting into the land
+            lowestNbr.altVal = currTile.altVal - (Utils.rnd() > 0.8 ? 1 : 0);
 
             //if height of new lowest neighbour is below sea level,
             if (lowestNbr.altVal < this.alts.seaLevel) {
-                // && tile is not neighbouring a sea tile, convert it to a freshwater lake
+                // && new lowest neighbout is not itself neighbouring a sea tile, convert it to a freshwater lake
                 let lowestNbrNbrs = this.getNeighbouringTiles(lowestNbr, grid);
                 let isNextToSea = false;
-                lowestNbrNbrs.forEach(n => isNextToSea = n.altVal < this.alts.sealevel || isNextToSea);
+                lowestNbrNbrs.forEach(n => isNextToSea = n.altVal < this.alts.seaLevel || isNextToSea);
 
                 if (isNextToSea) lowestNbr.water = this.waters.saltwater;
                 else lowestNbr.water = this.waters.freshwater;
@@ -57,9 +66,8 @@ export class RiverMaker {
             lowerNbrs.push(lowestNbr);
         }
 
-
         //choose one randomly
-        let nextTile = randomMember(lowerNbrs);
+        let nextTile = Utils.rnd(lowerNbrs);
 
         let nextTileIsAlreadyRiver = nextTile.river;
         this.setTilesToRiver(currTile, nextTile);
@@ -88,6 +96,6 @@ export class RiverMaker {
         else if (nextTile.x > currTile.x) nextTile.river += "W";
         else if (nextTile.y < currTile.y) nextTile.river += "S";
         else if (nextTile.y > currTile.y) nextTile.river += "N";
-        nextTile.riverId = this.nextRiverId;
+        nextTile.riverId = nextTile.riverId ? nextTile.riverId : this.nextRiverId;
     }
 }

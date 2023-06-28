@@ -43,8 +43,12 @@ export class WorldGenerator {
             for (let j = 0; j < this.BOARDSIZE; j++) {
                 let tile = grid[i][j];
                 this.noiseSeed(this.noiseProfiles[0]);
-                let altNoise = Math.floor(this.noise(i * this.roughness, j * this.roughness) * 50)
-                let altIslandBias = Math.floor(50 - (50 / (this.BOARDSIZE / 2)) * Math.sqrt(((i - this.BOARDSIZE / 2) * (i - this.BOARDSIZE / 2) + (j - this.BOARDSIZE / 2) * (j - this.BOARDSIZE / 2) + 1)));
+
+                let altNoiseWeight = 50;
+                let altIslandBiasWeight = 50;
+                let altNoise = Math.floor(altNoiseWeight * this.noise(i * this.roughness, j * this.roughness))
+                let altIslandBias = Math.floor(altIslandBiasWeight * (1 - (1 / (this.BOARDSIZE / 2)) * Math.sqrt(((i - this.BOARDSIZE / 2) * (i - this.BOARDSIZE / 2) + (j - this.BOARDSIZE / 2) * (j - this.BOARDSIZE / 2) + 1))));
+
                 let alt = altNoise + altIslandBias;
                 tile.altVal = alt;
             }
@@ -128,27 +132,37 @@ export class WorldGenerator {
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
                 let tile = grid[i][j];
+                //don't set water sources in the mountains
+                if (tile.altVal >= this.alts.highlandsLevel) continue;
+
                 //assume freshwater initially with a sea-water flood-fill pass coming after
                 if (tile.altVal < this.alts.seaLevel) tile.water = this.waters.freshwater;
-                else if (tile.alt >= this.alts.highlandsLevel) {
-                    //do nothing, stops lakes from being next to the sea or on a mountain
-                }
-                else if ((tile.wet == "desert") & (Utils.rnd() < this.hydration / 4)) {
-                    tile.water = "freshwater";
-                    tile.waterSource = true;
-                }
-                else if ((tile.wet == "dry") & (Utils.rnd() < this.hydration / 2)) {
-                    tile.water = "freshwater";
-                    tile.waterSource = true;
-                }
-                else if ((tile.wet == "wet") & (Utils.rnd() < this.hydratrion)) {
-                    tile.water = "freshwater";
-                    tile.waterSource = true;
+                else {
+                    //make sure no neighbouring tiles are below sealevel, as the lake will be adjacent to the sea
+                    let nbrs = this.getNeighbouringTiles(tile, grid);
+                    let isNextToSea = false;
+                    nbrs.forEach(n => isNextToSea = n.altVal < this.alts.seaLevel || isNextToSea);
+
+                    if (isNextToSea) {
+                        //do nothing
+                    }
+                    else if ((tile.wet == "desert") & (Utils.rnd() < this.hydration / 4)) {
+                        tile.water = "freshwater";
+                        tile.waterSource = true;
+                    }
+                    else if ((tile.wet == "dry") & (Utils.rnd() < this.hydration / 2)) {
+                        tile.water = "freshwater";
+                        tile.waterSource = true;
+                    }
+                    else if ((tile.wet == "wet") & (Utils.rnd() < this.hydratrion)) {
+                        tile.water = "freshwater";
+                        tile.waterSource = true;
+                    }
                 }
 
                 //set water sources
-                if (tile.water == "freshwater" || tile.water == "saltwater" || tile.alt >= this.alts.highlandsLevel) {
-                    // do nothing for tile's already water or a mountain
+                if (tile.water == "freshwater" || tile.water == "saltwater") {
+                    // do nothing for tile's already water
                 }
                 else if ((tile.wet == "desert") & (Utils.rnd() < this.hydration / 8)) {
                     tile.waterSource = true;
@@ -169,15 +183,15 @@ export class WorldGenerator {
             }
         }
 
-        // set outside water to saltwater with a floodfill algorithm
-        floodFill(grid, 0, 0, "water", "saltwater");
-
-        console.log("Waters set")
-
         //run rivers
         this.riverMaker.makeRivers(grid);
 
         console.log("rivers run");
+
+        // set outside water to saltwater with a floodfill algorithm
+        floodFill(grid, 0, 0, "water", "saltwater");
+
+        console.log("Waters set")
 
         //to help smooth out those sharp river valleys a little.
         //smoothVals(grid, "altVal");
@@ -230,8 +244,8 @@ export class WorldGenerator {
                 let { top, right, bottom, left } = this.getNeighbouringTileCoords(i, j);
                 let tile = grid[i][j], topTile = grid[top.x][top.y], rightTile = grid[right.x][right.y], bottomTile = grid[bottom.x][bottom.y], leftTile = grid[left.x][left.y];
 
+                //set tiles significantly altitudially different to their neighbours as "hills"
                 if (!tile.water && tile.alt !== this.alts.mountains) {
-                    //set tiles significantly altitudially different to their neighbours as "hills"
                     let changes = 0, altDiff = 3, reqDiffNbrs = 2;
                     if (Math.abs(topTile.altVal - tile.altVal) > altDiff) changes++;
                     if (Math.abs(rightTile.altVal - tile.altVal) > altDiff) changes++;
@@ -501,7 +515,7 @@ export class RegionGenerator {
 
     getNearestID(i, j, startCells) {
         //go through each start position and calc the dist, keeping the shortest
-        let shortest = dist(0, 0, this.width, this.height); //dummy data that is the max possible dist
+        let shortest = Utils.dist(0, 0, this.width, this.height); //dummy data that is the max possible dist
         let nearestID = 0;
 
         for (let n = 0; n < startCells.length; n++) {
@@ -512,11 +526,11 @@ export class RegionGenerator {
             //The current one, one at plus world width and one at minus world width
             //and introduce some variation to the otherwise straight lines
             let noise = Utils.rnd() * 2 * this.noiseFactor - this.noiseFactor;
-            let d0 = dist(i, j, startPositionX, startPositionY) + noise;
+            let d0 = Utils.dist(i, j, startPositionX, startPositionY) + noise;
             let dLeft =
-                dist(i, j, startPositionX - this.width, startPositionY) + noise;
+                Utils.dist(i, j, startPositionX - this.width, startPositionY) + noise;
             let dRight =
-                dist(i, j, startPositionX + this.width, startPositionY) + noise;
+                Utils.dist(i, j, startPositionX + this.width, startPositionY) + noise;
 
             //if one is the shortest, set the ID to the ID of that start position
             if (d0 < shortest) {
@@ -564,7 +578,7 @@ export class RegionGenerator {
                     //check if there aren't enough neighbours
                     if (matchingNeighbours < enough) {
                         //set the cell to a random neighbour ID
-                        this.data[i][j] = randomMember(neighbourIDs);
+                        this.data[i][j] = Utils.rnd(neighbourIDs);
 
                         //and then set changed to true, as there was a change
                         changed = true;

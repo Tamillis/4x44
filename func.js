@@ -1,12 +1,5 @@
 //Some simple global functionality
 
-function randomMember(arr) {
-    return arr[Math.floor(Utils.rnd() * arr.length)];
-}
-
-//setup a distance function
-let dist = (x1, y1, x2, y2) => Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-
 function floodFill(grid, i, j, prop, newVal) {
     let oldVal = grid[i][j][prop];
 
@@ -78,6 +71,8 @@ class Utils {
         // Four 32-bit component hashes provide the seed for sfc32.
         this.random = this.sfc32(seedHash[0], seedHash[1], seedHash[2], seedHash[3]);
     }
+
+    static dist = (x1, y1, x2, y2) => Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
   
     static rnd(upperBound = 1, lowerBound = 0) {
         if (Array.isArray(upperBound)) return this.randomMember(upperBound);
