@@ -64,10 +64,10 @@ export class Wind {
         let friction = (100 - grid[i][j][frictionProp]) / (100 - this.seaLevel);
 
         //get spread from horizontal component, 
-        let horizontalSpread = Math.floor(this.oldGrid[i + xn][j] * Math.abs(this.windVector.x) * friction * 0.5);
+        let horizontalSpread = Math.floor(this.oldGrid[i + xn][j] * Math.abs(this.windVector.x) * friction * 0.35);
 
         //and same for vertical component
-        let verticalSpread = Math.floor(this.oldGrid[i][j + yn] * Math.abs(this.windVector.y) * friction * 0.5);
+        let verticalSpread = Math.floor(this.oldGrid[i][j + yn] * Math.abs(this.windVector.y) * friction * 0.35);
 
         //and reducing them from the prev tile and adding it to the next
         grid[i][j][spreadProp] += horizontalSpread;

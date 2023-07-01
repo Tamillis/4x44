@@ -29,6 +29,7 @@
       "wet": "wet"
     },
     "temps" : {
+      "smoothing" : 3,
       "frozen": "frozen",
       "frozenLevel": 25,
       "cold": "cold",

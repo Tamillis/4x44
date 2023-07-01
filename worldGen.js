@@ -6,8 +6,6 @@ export class WorldGenerator {
     constructor(params, BOARDSIZE, noise, noiseSeed) {
         //load world generator information
 
-        //TODO set up seed
-
         this.BOARDSIZE = BOARDSIZE;
         this.noise = noise;
         this.noiseSeed = noiseSeed;
@@ -125,13 +123,14 @@ export class WorldGenerator {
             }
         }
 
+        console.log("wet noise layer done");
+
+        //set initial tile wet type for the purposes of setting water
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
                 this.setTileWetType(grid[i][j]);
             }
         }
-
-        console.log("wet noise layer done");
 
         //set waters
         for (let i = 0; i < this.BOARDSIZE; i++) {
@@ -186,7 +185,16 @@ export class WorldGenerator {
 
         console.log("rivers run");
 
-        //finally set water tiles to wet 100
+        //can finally set alt type as this is the last time altitudes were affected
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                this.setTileAltType(grid[i][j]);
+            }
+        }
+
+        console.log("Altitudes finalised");
+
+        //set water tiles to wet 100
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
                 grid[i][j].wetVal = grid[i][j].water ? 100 : grid[i][j].wetVal;
@@ -199,22 +207,19 @@ export class WorldGenerator {
 
         // set outside water to saltwater with a floodfill algorithm
         floodFill(grid, 0, 0, "water", "saltwater");
+        
+        console.log("Waters set");
 
         //shift wets with wind
-        this.windSimulator.blow(grid, "wetVal", "altVal", 5);
-
-        console.log("Waters set")
-
-        //to help smooth out those sharp river valleys a little.
-        //smoothVals(grid, "altVal");
-
+        this.windSimulator.blow(grid, "wetVal", "altVal", 15);
+        
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
-                this.setTileAltType(grid[i][j]);
+                this.setTileWetType(grid[i][j]);
             }
         }
 
-        console.log("Altitudes finalised");
+        console.log("Wets finalised");
 
         //temperature
         for (let i = 0; i < this.BOARDSIZE; i++) {
@@ -243,10 +248,10 @@ export class WorldGenerator {
         }
 
         //shift temperatures with wind
-        this.windSimulator.blow(grid, "tempVal", "altVal", 5);
+        this.windSimulator.blow(grid, "tempVal", "altVal", 10);
 
         //and smooth
-        for (let i = 0; i < 2; i++) smoothVals(grid, "tempVal");
+        for (let i = 0; i < this.temps.smoothing; i++) smoothVals(grid, "tempVal");
 
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
@@ -282,8 +287,6 @@ export class WorldGenerator {
                 ) {
                     grid[i][j].coastal = grid[i][j].hilly ? "cliffs" : "coast";
                 }
-
-                //drag heat and wetness with the wind, basic fluid sim? alt will block / cause build-up TODO
             }
         }
 
@@ -357,7 +360,7 @@ export class WorldGenerator {
             hillRatio < this.reqs.minHillRatio ||
             hillRatio > this.reqs.maxHillRatio) {
             if (debug) console.warn("Regen-ing");
-            //grid = this.genGrid(grid);
+            grid = this.genGrid(grid);
         }
 
         return grid;
