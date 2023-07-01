@@ -123,7 +123,7 @@ let game = (s) => {
 
     s.strokeWeight(4);
     s.stroke("#AAA");
-    s.line(crosshair.x, crosshair.y, 0.25 * board.wind.x + crosshair.x, 0.25 * board.wind.y + crosshair.y);
+    s.line(crosshair.x, crosshair.y, 0.25 * worldGenerator.wind.x + crosshair.x, 0.25 * worldGenerator.wind.y + crosshair.y);
     s.pop();
   }
 
@@ -151,7 +151,7 @@ let game = (s) => {
     Utils.init();
     worldGenerator = new WorldGenerator(worldParams, BOARDSIZE, s.noise, s.noiseSeed);
     board.grid = worldGenerator.genGrid(board.grid);
-    board.wind = getRandomVectorForce(100, 50);
+    
   }
 
   s.getMode = function() {

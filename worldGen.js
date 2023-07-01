@@ -1,5 +1,7 @@
 //responsible for how the world is generated, constuctor takes in parameters used to tweak generation
 import { RiverMaker } from "./riverMaker.js";
+import { Wind } from "./wind.js";
+
 export class WorldGenerator {
     constructor(params, BOARDSIZE, noise, noiseSeed) {
         //load world generator information
@@ -11,11 +13,14 @@ export class WorldGenerator {
         this.noiseSeed = noiseSeed;
         this.noiseProfiles = [Utils.rnd(100), Utils.rnd(100), Utils.rnd(100)];
 
-        this.riverMaker = new RiverMaker(params, this.getNeighbouringTiles);
+        this.riverMaker = new RiverMaker(params);
 
         Object.keys(params).forEach(k => {
             this[k] = params[k];
         });
+
+        this.wind = getRandomVectorForce(100, 50);
+        this.windSimulator = new Wind(BOARDSIZE, this.wind, this.alts.seaLevel);
     }
 
     genGrid(grid) {
@@ -126,7 +131,7 @@ export class WorldGenerator {
             }
         }
 
-        console.log("wet data done");
+        console.log("wet noise layer done");
 
         //set waters
         for (let i = 0; i < this.BOARDSIZE; i++) {
@@ -176,20 +181,27 @@ export class WorldGenerator {
             }
         }
 
-        //finally set water tiles to wet 100
-        for (let i = 0; i < this.BOARDSIZE; i++) {
-            for (let j = 0; j < this.BOARDSIZE; j++) {
-                grid[i][j].wetVal = grid[i][j].water ? 100 : grid[i][j].wetVal;
-            }
-        }
-
         //run rivers
         this.riverMaker.makeRivers(grid);
 
         console.log("rivers run");
 
+        //finally set water tiles to wet 100
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                grid[i][j].wetVal = grid[i][j].water ? 100 : grid[i][j].wetVal;
+                grid[i][j].wetVal = grid[i][j].riverId > 0 ? 100 : grid[i][j].wetVal;
+            }
+        }
+
+        //and smooth
+        for (let i = 0; i < this.wets.smoothing; i++) smoothVals(grid, "wetVal");
+
         // set outside water to saltwater with a floodfill algorithm
         floodFill(grid, 0, 0, "water", "saltwater");
+
+        //shift wets with wind
+        this.windSimulator.blow(grid, "wetVal", "altVal", 5);
 
         console.log("Waters set")
 
@@ -229,6 +241,12 @@ export class WorldGenerator {
                 tile.tempVal = temp;
             }
         }
+
+        //shift temperatures with wind
+        this.windSimulator.blow(grid, "tempVal", "altVal", 5);
+
+        //and smooth
+        for (let i = 0; i < 2; i++) smoothVals(grid, "tempVal");
 
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
@@ -646,9 +664,9 @@ class Tile {
         //geographic properties
         this.x = x;
         this.y = y;
-        this.alt = 50;
-        this.temp = 50;
-        this.wet = 50;
+        this.altVal = 50;
+        this.tempVal = 50;
+        this.wetVal = 50;
         this.water = false;
         this.waterSource = false;
         this.forest = false;

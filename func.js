@@ -113,6 +113,25 @@ class Utils {
             return (t >>> 0) / 4294967296;
         }
     }
+
+    static getNeighbouringTiles(tile, grid) {
+        //selects only neighbouring tiles, ignoring borders
+        let neighbours = [];
+
+        //top neighbour
+        if (tile.y - 1 >= 0) neighbours.push(grid[tile.x][tile.y - 1]);
+
+        //right neighbour
+        if (tile.x + 1 < grid.length) neighbours.push(grid[tile.x + 1][tile.y]);
+
+        //bottom neighbour
+        if (tile.y + 1 < grid.length) neighbours.push(grid[tile.x][tile.y + 1]);
+
+        //left neighbour
+        if (tile.x - 1 >= 0) neighbours.push(grid[tile.x - 1][tile.y]);
+
+        return neighbours;
+    }
   }
 
 class Queue {

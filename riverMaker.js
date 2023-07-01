@@ -1,13 +1,11 @@
 export class RiverMaker {
-    constructor(params, getNeighbouringTiles) {
+    constructor(params) {
         this.nextRiverId = 1;
         this.riverStack = [];
 
         Object.keys(params).forEach(k => {
             this[k] = params[k];
         });
-
-        this.getNeighbouringTiles = getNeighbouringTiles;
     }
 
     makeRivers(grid) {
@@ -24,7 +22,7 @@ export class RiverMaker {
     runRiver(currTile, grid) {
         currTile.riverId = this.nextRiverId;
         //get neighbour tiles 
-        let nbrs = this.getNeighbouringTiles(currTile, grid);
+        let nbrs = Utils.getNeighbouringTiles(currTile, grid);
         //but ignore ones that have the same river id
         let notThisRiverNbrs = nbrs.filter(t => t.riverId !== currTile.riverId);
 
@@ -48,20 +46,11 @@ export class RiverMaker {
             let lowestNbr = notThisRiverNbrs.reduce((lowestTileSoFar, nextTile) => nextTile.altVal < lowestTileSoFar.altVal ? nextTile : lowestTileSoFar);
 
             //sometimes the alt is stepped down, cutting into the land
-            lowestNbr.altVal = currTile.altVal - (Utils.rnd() > 0.8 ? 1 : 0);
+            lowestNbr.altVal = currTile.altVal - (Utils.rnd() > this.waters.cutRate ? 0 : 1);
 
-            //if height of new lowest neighbour is below sea level,
-            if (lowestNbr.altVal < this.alts.seaLevel) {
-                // && new lowest neighbout is not itself neighbouring a sea tile, convert it to a freshwater lake
-                let lowestNbrNbrs = this.getNeighbouringTiles(lowestNbr, grid);
-                let isNextToSea = false;
-                lowestNbrNbrs.forEach(n => isNextToSea = n.altVal < this.alts.seaLevel || isNextToSea);
-
-                if (isNextToSea) lowestNbr.water = this.waters.saltwater;
-                else lowestNbr.water = this.waters.freshwater;
-
-                //and don't set to river
-            }
+            //if height of new lowest neighbour is below sea level, convert it to a water
+            if (lowestNbr.altVal < this.alts.seaLevel) lowestNbr.water = this.waters.freshwater;
+            
             //and make it a lowerNbrs
             lowerNbrs.push(lowestNbr);
         }

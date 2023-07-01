@@ -21,8 +21,9 @@
       "driftForceMin" : 15
     },
     "wets" : {
+      "smoothing": 4,
       "desert": "desert",
-      "desertLevel": 20,
+      "desertLevel": 30,
       "dry": "dry",
       "dryLevel": 60,
       "wet": "wet"
@@ -41,7 +42,8 @@
     "waters" : {
       "none" : false,
       "freshwater" : "freshwater",
-      "saltwater" : "saltwater"
+      "saltwater" : "saltwater",
+      "cutRate" : 0.4
     },
     "reqs" : {
       "minMountains" : 25,

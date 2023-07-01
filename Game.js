@@ -9,7 +9,6 @@ export class Board {
   constructor(dims = 25) {
     this.dims = dims;
     this.grid = [];
-    this.wind = { x: 0, y: 0 };
 
     for (let i = 0; i < dims; i++) this.grid[i] = [];
   }
