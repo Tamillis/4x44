@@ -207,12 +207,38 @@ export class WorldGenerator {
 
         // set outside water to saltwater with a floodfill algorithm
         floodFill(grid, 0, 0, "water", "saltwater");
-        
+
         console.log("Waters set");
 
-        //shift wets with wind
-        this.windSimulator.blow(grid, "wetVal", "altVal", 15);
-        
+        //shift wets with wind, only every water source should be kept and iterated on
+        //create copy array for use with intermediary calculation, holding only wetVals and altVals (for friction)
+        let wetGrid = [];
+        for (let i = 0; i < grid.length; i++) {
+            wetGrid[i] = [];
+            for (let j = 0; j < grid[i].length; j++) {
+                wetGrid[i][j] = { altVal: grid[i][j].altVal, wetVal: 0 };
+            }
+        }
+
+        for (let n = 0; n < this.winds.wetIterations; n++) {
+            this.windSimulator.blow(wetGrid, "wetVal", "altVal", 15);
+            //re add source tile values
+            for (let i = 0; i < this.BOARDSIZE; i++) {
+                for (let j = 0; j < this.BOARDSIZE; j++) {
+                    if (wetGrid[i][j].wetVal > 100) wetGrid[i][j].wetVal = 100;
+                    wetGrid[i][j].wetVal = Math.floor(0.5 * (wetGrid[i][j].wetVal + grid[i][j].wetVal));
+                }
+            }
+        }
+
+        //finally set fully calced wetGrid wetVals to grid wetVals
+        for (let i = 0; i < grid.length; i++) {
+            for (let j = 0; j < grid[i].length; j++) {
+                grid[i][j].wetVal = wetGrid[i][j].wetVal;
+            }
+        }
+
+        //set water tile types
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
                 this.setTileWetType(grid[i][j]);
@@ -248,7 +274,7 @@ export class WorldGenerator {
         }
 
         //shift temperatures with wind
-        this.windSimulator.blow(grid, "tempVal", "altVal", 10);
+        this.windSimulator.blow(grid, "tempVal", "altVal", this.winds.tempIterations);
 
         //and smooth
         for (let i = 0; i < this.temps.smoothing; i++) smoothVals(grid, "tempVal");
@@ -360,7 +386,7 @@ export class WorldGenerator {
             hillRatio < this.reqs.minHillRatio ||
             hillRatio > this.reqs.maxHillRatio) {
             if (debug) console.warn("Regen-ing");
-            grid = this.genGrid(grid);
+            //grid = this.genGrid(grid);
         }
 
         return grid;
@@ -543,27 +569,13 @@ export class RegionGenerator {
             let startPositionX = startCells[n][0];
             let startPositionY = startCells[n][1];
 
-            //to wrap around the left-right edges, use three calcs:
-            //The current one, one at plus world width and one at minus world width
-            //and introduce some variation to the otherwise straight lines
-            let noise = Utils.rnd() * 2 * this.noiseFactor - this.noiseFactor;
+            // introduce some variation to the otherwise straight lines
+            let noise = Utils.rnd(this.noiseFactor, -this.noiseFactor);
             let d0 = Utils.dist(i, j, startPositionX, startPositionY) + noise;
-            let dLeft =
-                Utils.dist(i, j, startPositionX - this.width, startPositionY) + noise;
-            let dRight =
-                Utils.dist(i, j, startPositionX + this.width, startPositionY) + noise;
 
-            //if one is the shortest, set the ID to the ID of that start position
+            //set the ID to the ID of that start position
             if (d0 < shortest) {
                 shortest = d0;
-                nearestID = this.data[startPositionX][startPositionY];
-            }
-            if (dLeft < shortest) {
-                shortest = dLeft;
-                nearestID = this.data[startPositionX][startPositionY];
-            }
-            if (dRight < shortest) {
-                shortest = dRight;
                 nearestID = this.data[startPositionX][startPositionY];
             }
         }
@@ -640,13 +652,8 @@ export class RegionGenerator {
             let x = i + neighbourRefs[n][0];
             let y = j + neighbourRefs[n][1];
 
-            //for the top and bottom ones, do continue to ignore those cells
-            if (y < 0 || y >= this.height) continue;
-
-            //for the left, get the rightmost ID
-            if (x < 0) x = this.width - 1;
-            //for the right, get the leftmost
-            if (x >= this.width) x = 0;
+            //for the edges do continue to ignore those cells
+            if (y < 0 || y >= this.height || x < 0 || x >= this.width) continue;
 
             //and append the corresponding ID to the list
             neighbourIDs.push(this.data[x][y]);

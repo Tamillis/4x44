@@ -1,14 +1,14 @@
 {
     "roughness" : 0.12,
     "forestation" : 0.45,
-    "hydration" : 0.02,
+    "hydration" : 0.015,
     "regions" : 8,
 
     "alts" : {
       "deepsea": "deepsea",
       "deepseaLevel": 20,
       "sea": "sea",
-      "seaLevel": 40,
+      "seaLevel": 45,
       "lowlands": "lowlands",
       "lowlandsLevel": 65,
       "highlands": "highlands",
@@ -17,13 +17,13 @@
     },
     "ridges" : {
       "smoothing" : 5,
-      "driftForceMax" : 30,
-      "driftForceMin" : 15
+      "driftForceMax" : 40,
+      "driftForceMin" : 25
     },
     "wets" : {
       "smoothing": 4,
       "desert": "desert",
-      "desertLevel": 30,
+      "desertLevel": 35,
       "dry": "dry",
       "dryLevel": 60,
       "wet": "wet"
@@ -46,9 +46,13 @@
       "saltwater" : "saltwater",
       "cutRate" : 0.4
     },
+    "winds" : {
+      "wetIterations" : 6,
+      "temptIterations" : 10
+    },
     "reqs" : {
-      "minMountains" : 25,
-      "maxMountains" : 200,
+      "minMountains" : 15,
+      "maxMountains" : 150,
       "minHillRatio" : 0.1,
       "maxHillRatio" : 0.33,
       "maxLandRatio" : 0.45,

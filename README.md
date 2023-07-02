@@ -7,10 +7,8 @@ For now it's just a fancy island generator.
 
 
 ### TODO List
- - tweak wind drift and temp calc so that sea level is a baseline, and that deep-seas don't effect the amount of drift
  - Put WorldGeneration into a web-watcher with all current console-log messages instead being watcher event messages, so the whole site / app doesn't just freeze during the lengthy generation process, and users can actually get some feedback as to what is going on.
  - Add region landmass counter, spawn minerals / resources according to above-sea landmass & region (so iron-rich region/s, copper-rich region/s, gold-silver-tin present regions)
- - Given Island world probably worth having regions not wrap left-right
  - Add a shallows water level for boat navigation & certain resources
 
 ### Commits
