@@ -1,13 +1,14 @@
-import { WorldGenerator } from "./worldGen.js";
+import { WorldGenerator } from "./lib//WorldGen/worldGen.js";
 import {Screen} from "./Screen.js";
 import { Board, Engine } from "./Game.js";
-import "./p5.js";
+import "./lib/p5.js";
 
 //can a simple web based 4x game be made that's finishable in 44 minutes? Let's call that 50 'turns'
 
-Utils.init();
+//TODO phase out p5 for my own custom renderer.
 
-console.log(Utils.rnd());
+//for some reason utils as a static class wasn't running its static initialiser first, so a manual .init() is used to force initialisation
+Utils.init();
 
 let game = (s) => {
   let debugData = {};
@@ -24,7 +25,7 @@ let game = (s) => {
   const BOARDSCALES = [5, 10, 25, 50, 100];
 
   s.preload = function () {
-    worldParams = s.loadJSON("./worldParams.json");
+    worldParams = s.loadJSON("./src/assets/worldParams.json");
   }
 
   s.setup = function () {

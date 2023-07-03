@@ -231,10 +231,10 @@ export class WorldGenerator {
             }
         }
 
-        //finally set fully calced wetGrid wetVals to grid wetVals
+        //finally set fully calced wetGrid wetVals to grid wetVals, unless below sea level in which case flatten to 100
         for (let i = 0; i < grid.length; i++) {
             for (let j = 0; j < grid[i].length; j++) {
-                grid[i][j].wetVal = wetGrid[i][j].wetVal;
+                grid[i][j].wetVal = grid[i][j].altVal < this.alts.seaLevel ? 100 : wetGrid[i][j].wetVal;
             }
         }
 
