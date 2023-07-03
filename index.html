@@ -1,59 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <script src="./src/utils/func.js" defer></script>
-    <script type='module' src="./src/main.js" defer></script>
-    
-    <link rel="stylesheet" type="text/css" href="style.css">
-    <meta charset="utf-8" />
 
-    <style>
-      * {
-        margin: 0px;
-        padding: 0px;
-        box-sizing: border-box;
-      }
-      #main {
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        background: linear-gradient(#aa00ee, #00ee00);
-      }
-    </style>
+<head>
+  <script type='module' src="./src/main.js" defer></script>
 
-  </head>
-  <body>
-    <main id="main">
-      <form onsubmit="cancelSubmit()">
-        <input type="text" placeholder="Enter seed..." id="seed">
-      </form>
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <meta charset="utf-8" />
 
-      <p id="framerate">LOADING GAME</p>
+  <style>
+    * {
+      margin: 0px;
+      padding: 0px;
+      box-sizing: border-box;
+    }
 
-      <div id="canvas-container"></div>
+    #main {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(#aa00ee, #00ee00);
+    }
+  </style>
 
-      <div>
-        <input type="checkbox" id="debug">
-        <label for="debug">Debug</label>
-      </div>
+</head>
 
-      <div>
-        <input type="radio" id="geo" name="mode" value="geo" checked class="radio">
-        <label for="geo">Geo</label>
-        <input type="radio" id="water" name="mode" value="water" class="radio">
-        <label for="water">Water</label>
-        <input type="radio" id="temp" name="mode" value="temp" class="radio">
-        <label for="temp">Temp</label>
-        <input type="radio" id="height" name="mode" value="height" class="radio">
-        <label for="height">Height</label>
-        <input type="radio" id="region" name="mode" value="region" class="radio">
-        <label for="region">Region</label>
-        <input type="radio" id="landregion" name="mode" value="landregion" class="radio">
-        <label for="landregion">Land Region</label>
-      </div>
-    </main>
-  </body>
+<body>
+  <main id="main">
+    <form onsubmit="(e) => {
+        e.preventDefault();
+        return false;
+    }">
+      <input type="text" placeholder="Enter seed..." id="seed">
+    </form>
+
+    <p id="framerate">LOADING GAME</p>
+
+    <div id="canvas-container"></div>
+
+    <div>
+      <input type="checkbox" id="debug">
+      <label for="debug">Debug</label>
+    </div>
+
+    <div>
+      <input type="radio" id="geo" name="mode" value="geo" checked class="radio">
+      <label for="geo">Geo</label>
+      <input type="radio" id="water" name="mode" value="water" class="radio">
+      <label for="water">Water</label>
+      <input type="radio" id="temp" name="mode" value="temp" class="radio">
+      <label for="temp">Temp</label>
+      <input type="radio" id="height" name="mode" value="height" class="radio">
+      <label for="height">Height</label>
+      <input type="radio" id="region" name="mode" value="region" class="radio">
+      <label for="region">Region</label>
+      <input type="radio" id="landregion" name="mode" value="landregion" class="radio">
+      <label for="landregion">Land Region</label>
+    </div>
+  </main>
+</body>
+
 </html>

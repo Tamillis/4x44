@@ -1,3 +1,5 @@
+import { Utils } from "../../utils/func.js";
+
 export class RiverMaker {
     constructor(params) {
         this.nextRiverId = 1;

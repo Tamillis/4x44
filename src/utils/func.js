@@ -1,6 +1,6 @@
 //Some simple global functionality
 
-function floodFill(grid, i, j, prop, newVal) {
+export function floodFill(grid, i, j, prop, newVal) {
     let oldVal = grid[i][j][prop];
 
     if (oldVal === newVal) return;
@@ -24,13 +24,17 @@ function floodFill(grid, i, j, prop, newVal) {
     }
 }
 
-function getRandomVectorForce(forceMax = 100, forceMin = 0, forceDir = null) {
+export function getRandomVectorForce(forceMax = 100, forceMin = 0, forceDir = null) {
     if (forceDir == null) forceDir = Utils.rnd() * 2 * Math.PI;
     let forceStr = forceMin + Utils.rnd() * (forceMax - forceMin);
     return { x: Math.floor(forceStr * Math.sin(forceDir)), y: Math.floor(forceStr * Math.cos(forceDir)) };
 }
 
-function smoothVals(grid, prop) {
+export function getDotProd(x1, y1, x2, y2) {
+    return x1 * x2 + y1 * y2;
+}
+
+export function smoothVals(grid, prop) {
     let oldVals = [];
     for (let i = 0; i < grid.length; i++) {
         oldVals[i] = [];
@@ -46,26 +50,20 @@ function smoothVals(grid, prop) {
     }
 }
 
-function highestTileVal(tiles, prop) {
+export function highestTileVal(tiles, prop) {
     let highest = tiles[0][prop];
     for (let i = 1; i < tiles.length; i++) if (tiles[i][prop] > highest) highest = tiles[i][prop];
     return highest;
 }
 
-function cancelSubmit(e) {
-    e.preventDefault();
-    return false;
-}
+export class Utils {
+    static seed = "";
 
-class Utils {
-    static init() {
-        let seed = document.getElementById("seed").value;
-        seed = seed == "" ? Math.floor(Math.random()*1_000_000) : seed;
-  
-        if(debug) console.log("Seed: ", seed);
-  
+    static init(seed) {
+        this.seed = seed == "" ? Math.floor(Math.random() * 1_000_000) : seed;
+
         // taken & modified from https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
-  
+
         // Create cyrb128 state:
         let seedHash = this.cyrb128(String(seed));
         // Four 32-bit component hashes provide the seed for sfc32.
@@ -73,17 +71,18 @@ class Utils {
     }
 
     static dist = (x1, y1, x2, y2) => Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-  
+
     static rnd(upperBound = 1, lowerBound = 0) {
         if (Array.isArray(upperBound)) return this.randomMember(upperBound);
         return this.random() * (upperBound - lowerBound) + lowerBound;
     }
-  
+
     static randomMember(arr) {
         return arr[Math.floor(this.random(arr.length))];
     }
-  
+
     static cyrb128(str) {
+        // taken & modified from https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
         let h1 = 1779033703, h2 = 3144134277,
             h3 = 1013904242, h4 = 2773480762;
         for (let i = 0, k; i < str.length; i++) {
@@ -99,8 +98,9 @@ class Utils {
         h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
         return [(h1 ^ h2 ^ h3 ^ h4) >>> 0, (h2 ^ h1) >>> 0, (h3 ^ h1) >>> 0, (h4 ^ h1) >>> 0];
     }
-  
+
     static sfc32(a, b, c, d) {
+        // taken & modified from https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
         return function () {
             a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0;
             var t = (a + b) | 0;
@@ -132,7 +132,75 @@ class Utils {
 
         return neighbours;
     }
-  }
+}
+
+let twoToOneD = (x, y, dims = 4) => x + y * dims;
+let oneToTwoD = (n, dims = 16) => { return { x: Math.floor(n % dims), y: Math.floor(n / dims) } };
+
+export class Perlin {
+    //my own perlin noise class
+    constructor() {
+        this.seed();
+    }
+
+    seed() {
+        this.grid = [];
+    }
+
+    noise(x, y) {
+        //my own implmentation of perlin noise
+
+        //throw error if x or y negative
+        if (x < 0 || y < 0) throw new RangeError("X and Y must be positive values");
+
+        //given point xy, what are the corresponding nodes?
+        let x0 = Math.floor(x);
+        let x1 = x0 + 1;
+        let y0 = Math.floor(y);
+        let y1 = y0 + 1;
+
+        //load nodes & dynamically get new nodes if necessary
+        let topLeftNode = this.grid[twoToOneD(x0, y0)];
+        if (topLeftNode == null) topLeftNode = this.makeNewNode(twoToOneD(x0, y0));
+        let topRightNode = this.grid[twoToOneD(x1, y0)];
+        if (topRightNode == null) topRightNode = this.makeNewNode(twoToOneD(x1, y0));
+        let bottomLeftNode = this.grid[twoToOneD(x0, y1)];
+        if (bottomLeftNode == null) bottomLeftNode = this.makeNewNode(twoToOneD(x0, y1));
+        let bottomRightNode = this.grid[twoToOneD(x1, y1)];
+        if (bottomRightNode == null) bottomRightNode = this.makeNewNode(twoToOneD(x1, y1));
+
+        //calc the dot product from each node to a point relative to that node 
+        //as if it were rx ry and the top left one each time
+        let fromTopLeftNode = getDotProd(x - x0, y - y0, topLeftNode.x, topLeftNode.y);
+        let fromTopRightNode = getDotProd(x - x1, y - y0, topRightNode.x, topRightNode.y);
+        let fromBottomLeftNode = getDotProd(x - x0, y - y1, bottomLeftNode.x, bottomLeftNode.y);
+        let fromBottomRightNode = getDotProd(x - x1, y - y1, bottomRightNode.x, bottomRightNode.y);
+
+        //interpolate between top nodes and bottoms nodes, 
+        //and then between those two interpolated values (i.e. in the vertical)
+        let xt = this.interpolate(x - x0, fromTopLeftNode, fromTopRightNode);
+        let xb = this.interpolate(x - x0, fromBottomLeftNode, fromBottomRightNode);
+        let vertical = this.interpolate(y - y0, xt, xb);
+
+        //the interpolation produces values from -1 to 1, so add 1 and divide by 2 to map to 0-1
+        let val = (vertical + 1) / 2;
+        return val;
+    }
+
+    makeNewNode(n) {
+        this.grid[n] = getRandomVectorForce(1, 0);
+        return this.grid[n];
+    }
+
+    interpolate(proportion, bottomVal, topVal) {
+        return bottomVal + this.smootherStep(proportion) * (topVal - bottomVal);
+    }
+
+    smootherStep(proportion) {
+        //Perlin's smootherStep equation
+        return 6 * proportion ** 5 - 15 * proportion ** 4 + 10 * proportion ** 3;
+    }
+}
 
 class Queue {
     constructor() {
@@ -165,5 +233,3 @@ class Queue {
         return this.length === 0;
     }
 }
-
-//TODO make a flood fill algorithm using the queue

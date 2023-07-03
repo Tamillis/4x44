@@ -1,14 +1,15 @@
-import { WorldGenerator } from "./lib//WorldGen/worldGen.js";
 import {Screen} from "./Screen.js";
 import { Board, Engine } from "./Game.js";
 import "./lib/p5.js";
+import "./utils/func.js";
+import {Utils} from "./utils/func.js";
 
 //can a simple web based 4x game be made that's finishable in 44 minutes? Let's call that 50 'turns'
 
 //TODO phase out p5 for my own custom renderer.
 
 //for some reason utils as a static class wasn't running its static initialiser first, so a manual .init() is used to force initialisation
-Utils.init();
+Utils.init(document.getElementById("seed").value);
 
 let game = (s) => {
   let debugData = {};
@@ -17,8 +18,11 @@ let game = (s) => {
   let board;
   let screen;
   let engine;
-  let worldGenerator;
   let worldParams;
+
+  let worldGenWorker;
+  let worldGenerating = false;
+  let latestMessage = "Not Done";
 
   const BOARDSIZE = 100;
   const SCREENSIZE = 600;
@@ -29,8 +33,6 @@ let game = (s) => {
   }
 
   s.setup = function () {
-    //TODO setup the entire sketch in a worker so that mapgen can have a loading screen
-
     debug = document.getElementById("debug").checked;
     let cnv = s.createCanvas(SCREENSIZE, SCREENSIZE);
     cnv.parent("canvas-container");
@@ -43,7 +45,6 @@ let game = (s) => {
     screen.checkBounds();
     screen.priorMode = s.getMode();
     screen.mode = s.getMode();
-    screen.rerender(board.grid);
 
     engine = new Engine();
   }
@@ -51,8 +52,15 @@ let game = (s) => {
   s.draw = function () {
     document.getElementById("framerate").innerHTML = Math.floor(s.frameRate());
 
+    if(worldGenerating) {
+      s.textAlign(s.CENTER, s.CENTER);
+      s.text(latestMessage, s.width/2, s.height/2);
+      return;
+    }
+
     let mouseCoords = screen.pxToBoardCoords(s.mouseX, s.mouseY);
-    engine.setActiveTiles(board.grid, mouseCoords.x, mouseCoords.y);
+    if(mouseCoords.x < 0 || mouseCoords.x >= BOARDSIZE || mouseCoords.y < 0 || mouseCoords.y >= BOARDSIZE) {}
+    else engine.setActiveTiles(board.grid, mouseCoords.x, mouseCoords.y);
 
     //draw grid
     screen.mode = s.getMode();
@@ -124,7 +132,7 @@ let game = (s) => {
 
     s.strokeWeight(4);
     s.stroke("#AAA");
-    s.line(crosshair.x, crosshair.y, 0.25 * worldGenerator.wind.x + crosshair.x, 0.25 * worldGenerator.wind.y + crosshair.y);
+    s.line(crosshair.x, crosshair.y, 0.25 * board.wind.x + crosshair.x, 0.25 * board.wind.y + crosshair.y);
     s.pop();
   }
 
@@ -137,7 +145,7 @@ let game = (s) => {
   }
 
   s.mousePressed = function (e) {
-    if (s.mouseX < 0 || s.mouseX > s.width || s.mouseY < 0 || s.mouseY > s.height) return;
+    if (s.mouseX < 0 || s.mouseX > s.width || s.mouseY < 0 || s.mouseY > s.height || worldGenerating) return;
     else if (s.mouseButton === s.RIGHT) {
       s.resetBoard();
       screen.rerender(board.grid);
@@ -149,10 +157,24 @@ let game = (s) => {
   }
 
   s.resetBoard = function () {
-    Utils.init();
-    worldGenerator = new WorldGenerator(worldParams, BOARDSIZE, s.noise, s.noiseSeed);
-    board.grid = worldGenerator.genGrid(board.grid);
-    
+    Utils.init(document.getElementById("seed").value);
+    if (debug) console.log("Seed: ", Utils.seed);
+
+    worldGenerating = true;
+    latestMessage = "Not Done";
+
+    worldGenWorker = new Worker("/src/utils/worldGenWorker.js", {type : "module"});
+    worldGenWorker.addEventListener("message", (e) => {
+      latestMessage = e.data.message;
+      if(latestMessage == "Done") {
+        board.grid = e.data.grid;
+        board.wind = e.data.wind;
+        screen.rerender(board.grid);
+        worldGenerating = false;
+      }
+    });
+
+    worldGenWorker.postMessage({worldParams: worldParams, board:board, seed:Utils.seed, debug:debug});    
   }
 
   s.getMode = function() {

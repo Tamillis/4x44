@@ -4,13 +4,15 @@
 // sometimes stepping forward a "turn"
 // moving the AI agents at the end of a turn
 
-//the game object that is the entire board, responsible for the 2x2 array of tiles and any properties true for the entire board (like wind)
+//the game object that is the entire board, responsible for the 2x2 array of tiles and any properties true for the entire board, like wind
 export class Board {
   constructor(dims = 25) {
     this.dims = dims;
     this.grid = [];
 
     for (let i = 0; i < dims; i++) this.grid[i] = [];
+
+    this.wind;
   }
 }
 
@@ -20,7 +22,8 @@ export class Engine {
     //set all tiles to inactive initially
     for (let i = 0; i < grid.length; i++) {
       for (let j = 0; j < grid[i].length; j++) {
-        grid[i][j].active = grid[i][j].underMouse(mx, my);
+        let tile = grid[i][j];
+        tile.active = tile.x == mx && tile.y == my;
       }
     }
 

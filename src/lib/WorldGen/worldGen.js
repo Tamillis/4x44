@@ -1,15 +1,17 @@
 //responsible for how the world is generated, constuctor takes in parameters used to tweak generation
 import { RiverMaker } from "./riverMaker.js";
 import { Wind } from "./wind.js";
+import { Utils, Perlin } from "../../utils/func.js";
+import * as func from "../../utils/func.js";
 
 export class WorldGenerator {
-    constructor(params, BOARDSIZE, noise, noiseSeed) {
+    constructor(params, board, seed, debug) {
         //load world generator information
+        Utils.init(seed);
 
-        this.BOARDSIZE = BOARDSIZE;
-        this.noise = noise;
-        this.noiseSeed = noiseSeed;
-        this.noiseProfiles = [Utils.rnd(100), Utils.rnd(100), Utils.rnd(100)];
+        this.debug = debug;
+        this.BOARDSIZE = board.dims;
+        this.noiseProfiles = [new Perlin(), new Perlin(), new Perlin()];
 
         this.riverMaker = new RiverMaker(params);
 
@@ -17,14 +19,14 @@ export class WorldGenerator {
             this[k] = params[k];
         });
 
-        this.wind = getRandomVectorForce(100, 50);
-        this.windSimulator = new Wind(BOARDSIZE, this.wind, this.alts.seaLevel);
+        this.wind = func.getRandomVectorForce(100, 50);
+        this.windSimulator = new Wind(this.BOARDSIZE, this.wind, this.alts.seaLevel);
     }
 
     genGrid(grid) {
         //generate regions from continent generator sketch
         let regionGen = new RegionGenerator(this.BOARDSIZE, this.BOARDSIZE, this.regions);
-        regionGen.debug = debug;
+        regionGen.debug = this.debug;
         regionGen.createRegions();
 
         //generate initial tile data
@@ -45,11 +47,9 @@ export class WorldGenerator {
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
                 let tile = grid[i][j];
-                this.noiseSeed(this.noiseProfiles[0]);
-
-                let altNoiseWeight = 50;
-                let altIslandBiasWeight = 50;
-                let altNoise = Math.floor(altNoiseWeight * this.noise(i * this.roughness, j * this.roughness))
+                let altNoiseWeight = 100;
+                let altIslandBiasWeight = 0;
+                let altNoise = Math.floor(altNoiseWeight * this.noiseProfiles[0].noise(i * this.roughness, j * this.roughness))
                 let altIslandBias = Math.floor(altIslandBiasWeight * (1 - (1 / (this.BOARDSIZE / 2)) * Math.sqrt(((i - this.BOARDSIZE / 2) * (i - this.BOARDSIZE / 2) + (j - this.BOARDSIZE / 2) * (j - this.BOARDSIZE / 2) + 1))));
 
                 let alt = altNoise + altIslandBias;
@@ -57,11 +57,15 @@ export class WorldGenerator {
             }
         }
 
+        //this.scaleValues(grid, "altVal", 0, 75);
+
         console.log("initial alts done");
+
+        console.log(this.noiseProfiles[0].grid.length)
 
         //adjust heights by generating ridges and troughs from regions and smoothing them out, using it as a mask
         let regionDriftForces = {};
-        for (let i = 0; i < this.regions; i++) regionDriftForces[i + 1] = getRandomVectorForce(this.ridges.driftForceMax, this.ridges.driftForceMin);
+        for (let i = 0; i < this.regions; i++) regionDriftForces[i + 1] = func.getRandomVectorForce(this.ridges.driftForceMax, this.ridges.driftForceMin);
 
         //only for tiles that have neighbours
         for (let i = 1; i < this.BOARDSIZE - 1; i++) {
@@ -86,27 +90,15 @@ export class WorldGenerator {
         }
 
         //and smooth
-        for (let i = 0; i < this.ridges.smoothing; i++) smoothVals(grid, "ridgeAlt");
+        for (let i = 0; i < this.ridges.smoothing; i++) func.smoothVals(grid, "ridgeAlt");
 
-        //scale ridgeAlt values from shallowest-tallest to 0-100
-        let tallestRidge = 0, shallowestTrough = 0;
-        for (let i = 0; i < this.BOARDSIZE; i++) {
-            for (let j = 0; j < this.BOARDSIZE; j++) {
-                if (grid[i][j].ridgeAlt < shallowestTrough) shallowestTrough = grid[i][j].ridgeAlt;
-                if (grid[i][j].ridgeAlt > tallestRidge) tallestRidge = grid[i][j].ridgeAlt;
-            }
-        }
-
-        for (let i = 0; i < this.BOARDSIZE; i++) {
-            for (let j = 0; j < this.BOARDSIZE; j++) {
-                grid[i][j].ridgeAlt = 50 / (tallestRidge - shallowestTrough) * (grid[i][j].ridgeAlt);
-            }
-        }
+        //scale values from current Low current Hight to new Low- new High
+        this.scaleValues(grid, "ridgeAlt", 0, 75);
 
         //adjust alt vals
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
-                grid[i][j].altVal = Math.floor(grid[i][j].altVal + grid[i][j].ridgeAlt);
+                //grid[i][j].altVal = Math.floor(grid[i][j].altVal + grid[i][j].ridgeAlt);
             }
         }
 
@@ -116,9 +108,8 @@ export class WorldGenerator {
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
                 let tile = grid[i][j];
-                this.noiseSeed(this.noiseProfiles[1]);
                 //made water distribution have less roughness than land because seems right
-                let wet = Math.floor(this.noise(i * this.roughness * 0.8, j * this.roughness * 0.8) * 100);
+                let wet = Math.floor(this.noiseProfiles[1].noise(i * this.roughness * 0.8, j * this.roughness * 0.8) * 100);
                 tile.wetVal = wet;
             }
         }
@@ -143,7 +134,7 @@ export class WorldGenerator {
                 if (tile.altVal < this.alts.seaLevel) tile.water = this.waters.freshwater;
                 else {
                     //make sure no neighbouring tiles are below sealevel, as the lake will be adjacent to the sea
-                    let nbrs = this.getNeighbouringTiles(tile, grid);
+                    let nbrs = Utils.getNeighbouringTiles(tile, grid);
                     let isNextToSea = false;
                     nbrs.forEach(n => isNextToSea = n.altVal < this.alts.seaLevel || isNextToSea);
 
@@ -203,10 +194,10 @@ export class WorldGenerator {
         }
 
         //and smooth
-        for (let i = 0; i < this.wets.smoothing; i++) smoothVals(grid, "wetVal");
+        for (let i = 0; i < this.wets.smoothing; i++) func.smoothVals(grid, "wetVal");
 
         // set outside water to saltwater with a floodfill algorithm
-        floodFill(grid, 0, 0, "water", "saltwater");
+        func.floodFill(grid, 0, 0, "water", "saltwater");
 
         console.log("Waters set");
 
@@ -258,7 +249,6 @@ export class WorldGenerator {
                 //no matter the range of j's, but always between 0 and 50
                 //-(200/(dims*dims))*(j-dims)j = temp
 
-                this.noiseSeed(this.noiseProfiles[2]);
                 /*
                 let temp =
                   floor(-(200 / (this.BOARDSIZE * this.BOARDSIZE)) * (j - this.BOARDSIZE) * j +
@@ -267,7 +257,7 @@ export class WorldGenerator {
 
                 let distAboveSea = tile.altVal - this.alts.seaLevel;
                 if (distAboveSea < 0) distAboveSea = 0;
-                let temp = Math.floor(20 + j * 35 / this.BOARDSIZE + (this.noise(i * this.roughness, j * this.roughness) * 50) - distAboveSea * distAboveSea / 35);
+                let temp = Math.floor(20 + j * 35 / this.BOARDSIZE + (this.noiseProfiles[2].noise(i * this.roughness, j * this.roughness) * 50) - distAboveSea * distAboveSea / 35);
 
                 tile.tempVal = temp;
             }
@@ -277,7 +267,7 @@ export class WorldGenerator {
         this.windSimulator.blow(grid, "tempVal", "altVal", this.winds.tempIterations);
 
         //and smooth
-        for (let i = 0; i < this.temps.smoothing; i++) smoothVals(grid, "tempVal");
+        for (let i = 0; i < this.temps.smoothing; i++) func.smoothVals(grid, "tempVal");
 
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
@@ -365,6 +355,22 @@ export class WorldGenerator {
         return grid;
     }
 
+    scaleValues(grid, prop, newLow, newHigh) {
+        let tallest = 0, shallowest = 0;
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                if (grid[i][j][prop] < shallowest) shallowest = grid[i][j][prop];
+                if (grid[i][j][prop] > tallest) tallest = grid[i][j][prop];
+            }
+        }
+
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                grid[i][j][prop] = (newHigh - newLow) / (tallest - shallowest) * (grid[i][j][prop]);
+            }
+        }
+    }
+
     checkReqs(grid) {
         let mountainCount = 0, landCount = 0, hillCount = 0;
         for (let i = 0; i < this.BOARDSIZE; i++) {
@@ -377,7 +383,7 @@ export class WorldGenerator {
 
         let landRatio = landCount / (this.BOARDSIZE * this.BOARDSIZE);
         let hillRatio = hillCount / landCount;
-        if (debug) console.log(`mountainCount ${mountainCount}`, `landRatio ${landRatio}`, `hillRatio ${hillRatio}`);
+        if (this.debug) console.log(`mountainCount ${mountainCount}`, `landRatio ${landRatio}`, `hillRatio ${hillRatio}`);
 
         if (landRatio < this.reqs.minLandRatio ||
             landRatio > this.reqs.maxLandRatio ||
@@ -385,7 +391,7 @@ export class WorldGenerator {
             mountainCount > this.reqs.maxMountains ||
             hillRatio < this.reqs.minHillRatio ||
             hillRatio > this.reqs.maxHillRatio) {
-            if (debug) console.warn("Regen-ing");
+            if (this.debug) console.warn("Regen-ing");
             //grid = this.genGrid(grid);
         }
 
@@ -407,25 +413,6 @@ export class WorldGenerator {
         let left = { x: i - 1 < 0 ? i : i - 1, y: j };
 
         return { top, right, bottom, left };
-    }
-
-    getNeighbouringTiles(tile, grid) {
-        //selects only neighbouring tiles, ignoring borders
-        let neighbours = [];
-
-        //top neighbour
-        if (tile.y - 1 >= 0) neighbours.push(grid[tile.x][tile.y - 1]);
-
-        //right neighbour
-        if (tile.x + 1 < grid.length) neighbours.push(grid[tile.x + 1][tile.y]);
-
-        //bottom neighbour
-        if (tile.y + 1 < grid.length) neighbours.push(grid[tile.x][tile.y + 1]);
-
-        //left neighbour
-        if (tile.x - 1 >= 0) neighbours.push(grid[tile.x - 1][tile.y]);
-
-        return neighbours;
     }
 
     setTileAltType(tile) {
@@ -689,9 +676,5 @@ class Tile {
         this.id = "x";
         this.active = true;
         this.discovered = true;
-    }
-
-    underMouse(mouseXCoord, mouseYCoord) {
-        return mouseXCoord == this.x && mouseYCoord == this.y;
     }
 }
