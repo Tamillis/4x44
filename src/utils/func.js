@@ -25,9 +25,9 @@ export function floodFill(grid, i, j, prop, newVal) {
 }
 
 export function getRandomVectorForce(forceMax = 100, forceMin = 0, forceDir = null) {
-    if (forceDir == null) forceDir = Utils.rnd() * 2 * Math.PI;
-    let forceStr = forceMin + Utils.rnd() * (forceMax - forceMin);
-    return { x: Math.floor(forceStr * Math.sin(forceDir)), y: Math.floor(forceStr * Math.cos(forceDir)) };
+    if (forceDir == null) forceDir = Math.random() * 2 * Math.PI;
+    let forceStr = forceMin + Math.random() * (forceMax - forceMin);
+    return { x: forceStr * Math.cos(forceDir), y: forceStr * Math.sin(forceDir) };
 }
 
 export function getDotProd(x1, y1, x2, y2) {
@@ -134,13 +134,14 @@ export class Utils {
     }
 }
 
-let twoToOneD = (x, y, dims = 4) => x + y * dims;
+let twoToOneD = (x, y, dims = 16) => x + y * dims;
 let oneToTwoD = (n, dims = 16) => { return { x: Math.floor(n % dims), y: Math.floor(n / dims) } };
 
 export class Perlin {
     //my own perlin noise class
     constructor() {
         this.seed();
+        this.dims = 516;
     }
 
     seed() {
@@ -160,14 +161,14 @@ export class Perlin {
         let y1 = y0 + 1;
 
         //load nodes & dynamically get new nodes if necessary
-        let topLeftNode = this.grid[twoToOneD(x0, y0)];
-        if (topLeftNode == null) topLeftNode = this.makeNewNode(twoToOneD(x0, y0));
-        let topRightNode = this.grid[twoToOneD(x1, y0)];
-        if (topRightNode == null) topRightNode = this.makeNewNode(twoToOneD(x1, y0));
-        let bottomLeftNode = this.grid[twoToOneD(x0, y1)];
-        if (bottomLeftNode == null) bottomLeftNode = this.makeNewNode(twoToOneD(x0, y1));
-        let bottomRightNode = this.grid[twoToOneD(x1, y1)];
-        if (bottomRightNode == null) bottomRightNode = this.makeNewNode(twoToOneD(x1, y1));
+        let topLeftNode = this.grid[twoToOneD(x0, y0, this.dims )];
+        if (topLeftNode == null) topLeftNode = this.makeNewNode(twoToOneD(x0, y0, this.dims ));
+        let topRightNode = this.grid[twoToOneD(x1, y0, this.dims )];
+        if (topRightNode == null) topRightNode = this.makeNewNode(twoToOneD(x1, y0, this.dims ));
+        let bottomLeftNode = this.grid[twoToOneD(x0, y1, this.dims )];
+        if (bottomLeftNode == null) bottomLeftNode = this.makeNewNode(twoToOneD(x0, y1, this.dims ));
+        let bottomRightNode = this.grid[twoToOneD(x1, y1, this.dims )];
+        if (bottomRightNode == null) bottomRightNode = this.makeNewNode(twoToOneD(x1, y1, this.dims ));
 
         //calc the dot product from each node to a point relative to that node 
         //as if it were rx ry and the top left one each time
@@ -188,7 +189,7 @@ export class Perlin {
     }
 
     makeNewNode(n) {
-        this.grid[n] = getRandomVectorForce(1, 0);
+        this.grid[n] = getRandomVectorForce(1, 1);
         return this.grid[n];
     }
 

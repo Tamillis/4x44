@@ -1,61 +1,62 @@
 {
-    "roughness" : 0.08,
-    "forestation" : 0.45,
-    "hydration" : 0.015,
-    "regions" : 8,
-
-    "alts" : {
-      "deepsea": "deepsea",
-      "deepseaLevel": 20,
-      "sea": "sea",
-      "seaLevel": 45,
-      "lowlands": "lowlands",
-      "lowlandsLevel": 65,
-      "highlands": "highlands",
-      "highlandsLevel": 75,
-      "mountains": "mountains"
-    },
-    "ridges" : {
-      "smoothing" : 5,
-      "driftForceMax" : 40,
-      "driftForceMin" : 25
-    },
-    "wets" : {
-      "smoothing": 4,
-      "desert": "desert",
-      "desertLevel": 35,
-      "dry": "dry",
-      "dryLevel": 60,
-      "wet": "wet"
-    },
-    "temps" : {
-      "smoothing" : 3,
-      "frozen": "frozen",
-      "frozenLevel": 25,
-      "cold": "cold",
-      "coldLevel": 35,
-      "mild": "mild",
-      "mildLevel": 50,
-      "warm": "warm",
-      "warmLevel": 60,
-      "hot": "hot"
-    },
-    "waters" : {
-      "none" : false,
-      "freshwater" : "freshwater",
-      "saltwater" : "saltwater",
-      "cutRate" : 0.4
-    },
-    "winds" : {
-      "wetIterations" : 6,
-      "temptIterations" : 10
-    },
-    "reqs" : {
-      "minMountains" : 15,
-      "maxMountains" : 150,
-      "minHillRatio" : 0.1,
-      "maxHillRatio" : 0.33,
-      "maxLandRatio" : 0.45,
-      "minLandRatio" : 0.25
-    }
+  "roughness": 0.125,
+  "forestation": 0.45,
+  "hydration": 0.015,
+  "regions": 8,
+  "alts": {
+    "deepsea": "deepsea",
+    "deepseaLevel": 20,
+    "sea": "sea",
+    "seaLevel": 45,
+    "lowlands": "lowlands",
+    "lowlandsLevel": 65,
+    "highlands": "highlands",
+    "highlandsLevel": 75,
+    "mountains": "mountains",
+    "regionHeightMin": -25,
+    "regionHeightMax": 25
+  },
+  "ridges": {
+    "smoothing": 5,
+    "driftForceMax": 40,
+    "driftForceMin": 25
+  },
+  "wets": {
+    "smoothing": 4,
+    "desert": "desert",
+    "desertLevel": 35,
+    "dry": "dry",
+    "dryLevel": 60,
+    "wet": "wet"
+  },
+  "temps": {
+    "smoothing": 3,
+    "frozen": "frozen",
+    "frozenLevel": 25,
+    "cold": "cold",
+    "coldLevel": 35,
+    "mild": "mild",
+    "mildLevel": 50,
+    "warm": "warm",
+    "warmLevel": 60,
+    "hot": "hot"
+  },
+  "waters": {
+    "none": false,
+    "freshwater": "freshwater",
+    "saltwater": "saltwater",
+    "cutRate": 0.4
+  },
+  "winds": {
+    "wetIterations": 6,
+    "temptIterations": 10
+  },
+  "reqs": {
+    "minMountains": 15,
+    "maxMountains": 150,
+    "minHillRatio": 0.1,
+    "maxHillRatio": 0.33,
+    "maxLandRatio": 0.45,
+    "minLandRatio": 0.25
+  }
 }

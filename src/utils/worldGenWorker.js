@@ -1,5 +1,4 @@
 import { WorldGenerator } from "../lib/WorldGen/worldGen.js";
-import { Board } from "../Game.js";
 import "./func.js";
 
 self.addEventListener("message", (e) => {

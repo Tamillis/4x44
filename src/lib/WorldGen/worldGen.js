@@ -20,6 +20,8 @@ export class WorldGenerator {
         });
 
         this.wind = func.getRandomVectorForce(100, 50);
+        this.wind.x = Math.floor(this.wind.x);
+        this.wind.y = Math.floor(this.wind.y);
         this.windSimulator = new Wind(this.BOARDSIZE, this.wind, this.alts.seaLevel);
     }
 
@@ -47,25 +49,50 @@ export class WorldGenerator {
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
                 let tile = grid[i][j];
-                let altNoiseWeight = 100;
-                let altIslandBiasWeight = 0;
-                let altNoise = Math.floor(altNoiseWeight * this.noiseProfiles[0].noise(i * this.roughness, j * this.roughness))
+                let altNoiseWeight = 50;
+                let altIslandBiasWeight = 50;
+                let altNoise = Math.floor(altNoiseWeight * this.noiseProfiles[0].noise(i * this.roughness, j * this.roughness));
                 let altIslandBias = Math.floor(altIslandBiasWeight * (1 - (1 / (this.BOARDSIZE / 2)) * Math.sqrt(((i - this.BOARDSIZE / 2) * (i - this.BOARDSIZE / 2) + (j - this.BOARDSIZE / 2) * (j - this.BOARDSIZE / 2) + 1))));
-
                 let alt = altNoise + altIslandBias;
                 tile.altVal = alt;
             }
         }
 
+        //have each region also have a base alt modifier, regionHeightMin and regionHeightMax, where differences are smoothed out a bit
+        let regionModifiers = [];
+        for (let n = 0; n < this.regions; n++) {
+            regionModifiers.push(Math.floor(Utils.rnd(this.alts.regionHeightMax, this.alts.regionHeightMin)));
+        }
+        let regionHeights = [];
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            regionHeights[i] = [];
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                regionHeights[i][j] = {region: grid[i][j].region, alt: regionModifiers[grid[i][j].region-1]}
+            }
+        }
+        //and smooth
+        for (let i = 0; i < 3; i++) func.smoothVals(regionHeights, "alt");
+        //and add
+        for (let i = 0; i < this.BOARDSIZE; i++) {
+            for (let j = 0; j < this.BOARDSIZE; j++) {
+                grid[i][j].altVal += regionHeights[i][j].alt;
+            }
+        }
+
+        console.log("Alts adjusted per region");
+
         //this.scaleValues(grid, "altVal", 0, 75);
 
         console.log("initial alts done");
 
-        console.log(this.noiseProfiles[0].grid.length)
-
         //adjust heights by generating ridges and troughs from regions and smoothing them out, using it as a mask
         let regionDriftForces = {};
-        for (let i = 0; i < this.regions; i++) regionDriftForces[i + 1] = func.getRandomVectorForce(this.ridges.driftForceMax, this.ridges.driftForceMin);
+        for (let i = 0; i < this.regions; i++) {
+            let forceVector = func.getRandomVectorForce(this.ridges.driftForceMax, this.ridges.driftForceMin);
+            forceVector.x = Math.floor(forceVector.x);
+            forceVector.y = Math.floor(forceVector.y);
+            regionDriftForces[i + 1] = forceVector;
+        }
 
         //only for tiles that have neighbours
         for (let i = 1; i < this.BOARDSIZE - 1; i++) {
@@ -98,7 +125,7 @@ export class WorldGenerator {
         //adjust alt vals
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
-                //grid[i][j].altVal = Math.floor(grid[i][j].altVal + grid[i][j].ridgeAlt);
+                grid[i][j].altVal = Math.floor(grid[i][j].altVal + grid[i][j].ridgeAlt);
             }
         }
 
@@ -514,7 +541,7 @@ export class RegionGenerator {
                     if (x == starts[i][0] && y == starts[i][1]) {
                         //if the x AND y match then there's a conflict so overlap is true
                         overlap = true;
-                        if (debug) console.log("RegionGenerator: Overlap detected, retrying");
+                        if (this.debug) console.log("RegionGenerator: Overlap detected, retrying");
                         //break for efficiency
                         break;
                     }
