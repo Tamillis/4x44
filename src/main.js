@@ -22,7 +22,7 @@ let game = (s) => {
 
   let worldGenWorker;
   let worldGenerating = false;
-  let latestMessage = "Not Done";
+  let latestMessage = "Loading";
 
   const BOARDSIZE = 100;
   const SCREENSIZE = 600;
@@ -53,6 +53,11 @@ let game = (s) => {
     document.getElementById("framerate").innerHTML = Math.floor(s.frameRate());
 
     if(worldGenerating) {
+      s.background(255);
+      let w = latestMessage.length * 8;
+      s.fill(255);
+      s.rect(s.width/2 - w/2, s.height/2 - 10, w, 20);
+      s.fill(0);
       s.textAlign(s.CENTER, s.CENTER);
       s.text(latestMessage, s.width/2, s.height/2);
       return;
@@ -161,7 +166,7 @@ let game = (s) => {
     if (debug) console.log("Seed: ", Utils.seed);
 
     worldGenerating = true;
-    latestMessage = "Not Done";
+    latestMessage = "Loading";
 
     worldGenWorker = new Worker("/src/utils/worldGenWorker.js", {type : "module"});
     worldGenWorker.addEventListener("message", (e) => {

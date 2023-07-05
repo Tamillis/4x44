@@ -25,7 +25,7 @@ export class WorldGenerator {
         this.windSimulator = new Wind(this.BOARDSIZE, this.wind, this.alts.seaLevel);
     }
 
-    genGrid(grid) {
+    genInitialDataAndRegions(grid) {
         //generate regions from continent generator sketch
         let regionGen = new RegionGenerator(this.BOARDSIZE, this.BOARDSIZE, this.regions);
         regionGen.debug = this.debug;
@@ -42,9 +42,10 @@ export class WorldGenerator {
             }
         }
 
-        //TODO convert all console logs to watcher messager events
-        console.log("initial tile data and regions done");
+        return "initial tile data and regions set";
+    }
 
+    genInitialAlts(grid) {
         //altitude - initially just perlin noise and a distance from the centre
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
@@ -58,16 +59,25 @@ export class WorldGenerator {
             }
         }
 
+        return "Initial altitudes generated";
+    }
+
+    adjustAltsPerRegion(grid) {
         //have each region also have a base alt modifier, regionHeightMin and regionHeightMax, where differences are smoothed out a bit
         let regionModifiers = [];
-        for (let n = 0; n < this.regions; n++) {
-            regionModifiers.push(Math.floor(Utils.rnd(this.alts.regionHeightMax, this.alts.regionHeightMin)));
+        //half negative
+        for (let n = 0; n < Math.floor(this.regions / 2); n++) {
+            regionModifiers.push(Math.floor(Utils.rnd(0, this.alts.regionHeightMin)));
+        }
+        //half positive
+        for (let n = Math.floor(this.regions / 2); n < this.regions; n++) {
+            regionModifiers.push(Math.floor(Utils.rnd(this.alts.regionHeightMax, 0)));
         }
         let regionHeights = [];
         for (let i = 0; i < this.BOARDSIZE; i++) {
             regionHeights[i] = [];
             for (let j = 0; j < this.BOARDSIZE; j++) {
-                regionHeights[i][j] = {region: grid[i][j].region, alt: regionModifiers[grid[i][j].region-1]}
+                regionHeights[i][j] = { region: grid[i][j].region, alt: regionModifiers[grid[i][j].region - 1] }
             }
         }
         //and smooth
@@ -79,12 +89,10 @@ export class WorldGenerator {
             }
         }
 
-        console.log("Alts adjusted per region");
+        return "Altitudes adjusted per region";
+    }
 
-        //this.scaleValues(grid, "altVal", 0, 75);
-
-        console.log("initial alts done");
-
+    genRidgeForces(grid) {
         //adjust heights by generating ridges and troughs from regions and smoothing them out, using it as a mask
         let regionDriftForces = {};
         for (let i = 0; i < this.regions; i++) {
@@ -129,8 +137,10 @@ export class WorldGenerator {
             }
         }
 
-        console.log("ridges calculated and applied");
+        return "Ridge forces calculated and applied";
+    }
 
+    genInitialWetness(grid) {
         //wetness
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
@@ -141,8 +151,10 @@ export class WorldGenerator {
             }
         }
 
-        console.log("wet noise layer done");
+        return "Initial wetness values set";
+    }
 
+    genWaterSources(grid) {
         //set initial tile wet type for the purposes of setting water
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
@@ -198,11 +210,17 @@ export class WorldGenerator {
             }
         }
 
+        return "Water sources set";
+    }
+
+    genRivers(grid) {
         //run rivers
         this.riverMaker.makeRivers(grid);
 
-        console.log("rivers run");
+        return "Rivers generated";
+    }
 
+    setAltTypes(grid) {
         //can finally set alt type as this is the last time altitudes were affected
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
@@ -210,8 +228,10 @@ export class WorldGenerator {
             }
         }
 
-        console.log("Altitudes finalised");
+        return "Altitudes finalised";
+    }
 
+    setWaters(grid) {
         //set water tiles to wet 100
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
@@ -226,8 +246,10 @@ export class WorldGenerator {
         // set outside water to saltwater with a floodfill algorithm
         func.floodFill(grid, 0, 0, "water", "saltwater");
 
-        console.log("Waters set");
+        return "Waters set";
+    }
 
+    adjustWetValues(grid) {
         //shift wets with wind, only every water source should be kept and iterated on
         //create copy array for use with intermediary calculation, holding only wetVals and altVals (for friction)
         let wetGrid = [];
@@ -256,6 +278,10 @@ export class WorldGenerator {
             }
         }
 
+        return "Wetness values finalised";
+    }
+
+    setWetTypes(grid) {
         //set water tile types
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
@@ -263,8 +289,10 @@ export class WorldGenerator {
             }
         }
 
-        console.log("Wets finalised");
+        return "Wetness finalised"
+    }
 
+    genInitialTemps(grid) {
         //temperature
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
@@ -290,21 +318,30 @@ export class WorldGenerator {
             }
         }
 
+        return "Initial temperature values set";
+    }
+
+    adjustTempValues(grid) {
         //shift temperatures with wind
         this.windSimulator.blow(grid, "tempVal", "altVal", this.winds.tempIterations);
 
         //and smooth
         for (let i = 0; i < this.temps.smoothing; i++) func.smoothVals(grid, "tempVal");
 
+        return "Temperature values finalised";
+    }
+
+    setTempTypes(grid) {
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
                 this.setTileTempType(grid[i][j]);
             }
         }
 
-        console.log("temp data done");
+        return "Temperatures finalised";
+    }
 
-        //process tiles using neighbouring information
+    genCoastAndHills(grid) {
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
                 let { top, right, bottom, left } = this.getNeighbouringTileCoords(i, j);
@@ -333,8 +370,10 @@ export class WorldGenerator {
             }
         }
 
-        console.log("coastal tiles and hills done");
+        return "coastal and hill tiles set";
+    }
 
+    genInitialForests(grid) {
         //Forestation
         for (let i = 0; i < this.BOARDSIZE; i++) {
             for (let j = 0; j < this.BOARDSIZE; j++) {
@@ -350,6 +389,10 @@ export class WorldGenerator {
             }
         }
 
+        return "Initial forestation";
+    }
+
+    adjustForests(grid) {
         //do a game of life pass on wether tiles are forested
         let forestAdjustments = [];
         for (let i = 0; i < this.BOARDSIZE; i++) {
@@ -373,9 +416,13 @@ export class WorldGenerator {
             }
         }
 
-        console.log("forests adjusted");
+        return "Forests adjusted and finalised";
+    }
 
-        //check world meets this.reqs
+    genGrid(grid) {
+
+
+        //TODO check world meets reqs at a stage-by-stage basis. Return values probably need a standardised DTO with grid, message and regenNeeded
         console.log("checking reqs");
         grid = this.checkReqs(grid);
 

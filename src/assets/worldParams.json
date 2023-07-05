@@ -5,7 +5,7 @@
   "regions": 8,
   "alts": {
     "deepsea": "deepsea",
-    "deepseaLevel": 20,
+    "deepseaLevel": 35,
     "sea": "sea",
     "seaLevel": 45,
     "lowlands": "lowlands",
@@ -13,8 +13,8 @@
     "highlands": "highlands",
     "highlandsLevel": 75,
     "mountains": "mountains",
-    "regionHeightMin": -25,
-    "regionHeightMax": 25
+    "regionHeightMin": -15,
+    "regionHeightMax": 15
   },
   "ridges": {
     "smoothing": 5,
@@ -45,7 +45,7 @@
     "none": false,
     "freshwater": "freshwater",
     "saltwater": "saltwater",
-    "cutRate": 0.4
+    "cutRate": 0.45
   },
   "winds": {
     "wetIterations": 6,
