@@ -228,6 +228,8 @@ export class Screen {
         return ice;
       case 10:
         return river;
+      default:
+        return "#333"
     }
   }
 

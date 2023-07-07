@@ -25,8 +25,8 @@ export function floodFill(grid, i, j, prop, newVal) {
 }
 
 export function getRandomVectorForce(forceMax = 100, forceMin = 0, forceDir = null) {
-    if (forceDir == null) forceDir = Math.random() * 2 * Math.PI;
-    let forceStr = forceMin + Math.random() * (forceMax - forceMin);
+    if (forceDir == null) forceDir = Utils.rnd() * 2 * Math.PI;
+    let forceStr = forceMin + Utils.rnd() * (forceMax - forceMin);
     return { x: forceStr * Math.cos(forceDir), y: forceStr * Math.sin(forceDir) };
 }
 

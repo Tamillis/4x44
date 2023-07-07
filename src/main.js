@@ -22,7 +22,7 @@ let game = (s) => {
 
   let worldGenWorker;
   let worldGenerating = false;
-  let latestMessage = "Loading";
+  let latestMessage = "P5 Loading";
 
   const BOARDSIZE = 100;
   const SCREENSIZE = 600;
@@ -75,18 +75,17 @@ let game = (s) => {
     
     debug = document.getElementById("debug").checked;
 
-    if (debug) {
-      s.loadDebugData();
+    //TODO put in screen class
+    let { x, y } = screen.pxToBoardCoords(s.mouseX, s.mouseY);
+    if (debug && x >= 0 && y >= 0 && x < BOARDSIZE && y < BOARDSIZE) {
+      s.loadDebugData(x, y);
       s.drawDebugBox();
     }
   }
 
-  s.loadDebugData = function () {
+  s.loadDebugData = function (x, y) {
     // debugData.screenX = screen.x;
     // debugData.screenY = screen.y;
-
-    let { x, y } = screen.pxToBoardCoords(s.mouseX, s.mouseY);
-    if (x < 0 || x >= BOARDSIZE || y < 0 || y >= BOARDSIZE) return;
     debugData.x = board.grid[x][y].x;
     debugData.y = board.grid[x][y].y;
     debugData.alt = board.grid[x][y].alt + " - " + board.grid[x][y].altVal;
@@ -166,11 +165,12 @@ let game = (s) => {
     if (debug) console.log("Seed: ", Utils.seed);
 
     worldGenerating = true;
-    latestMessage = "Loading";
+    latestMessage = "Generating";
 
     worldGenWorker = new Worker("/src/utils/worldGenWorker.js", {type : "module"});
     worldGenWorker.addEventListener("message", (e) => {
       latestMessage = e.data.message;
+      if(debug) console.log(latestMessage);
       if(latestMessage == "Done") {
         board.grid = e.data.grid;
         board.wind = e.data.wind;

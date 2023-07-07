@@ -7,6 +7,7 @@ import * as func from "../../utils/func.js";
 export class WorldGenerator {
     constructor(params, board, seed, debug) {
         //load world generator information
+
         Utils.init(seed);
 
         this.debug = debug;
@@ -27,9 +28,11 @@ export class WorldGenerator {
 
     genInitialDataAndRegions(grid) {
         //generate regions from continent generator sketch
-        let regionGen = new RegionGenerator(this.BOARDSIZE, this.BOARDSIZE, this.regions);
-        regionGen.debug = this.debug;
+        let regionGen = new RegionGenerator(this.BOARDSIZE, this.BOARDSIZE, this.regions, this.debug);
+
+        console.log("RegionGenerator made")
         regionGen.createRegions();
+        console.log("regions created")
 
         //generate initial tile data
         for (let i = 0; i < this.BOARDSIZE; i++) {
@@ -95,11 +98,11 @@ export class WorldGenerator {
     genRidgeForces(grid) {
         //adjust heights by generating ridges and troughs from regions and smoothing them out, using it as a mask
         let regionDriftForces = {};
-        for (let i = 0; i < this.regions; i++) {
+        for (let i = 0; i <= this.regions; i++) {
             let forceVector = func.getRandomVectorForce(this.ridges.driftForceMax, this.ridges.driftForceMin);
             forceVector.x = Math.floor(forceVector.x);
             forceVector.y = Math.floor(forceVector.y);
-            regionDriftForces[i + 1] = forceVector;
+            regionDriftForces[i] = forceVector;
         }
 
         //only for tiles that have neighbours
@@ -513,19 +516,23 @@ export class WorldGenerator {
 }
 
 export class RegionGenerator {
-    constructor(i, j, regions) {
+    constructor(i, j, regions, debug = false) {
         //this is a class wrapper to the continent generator algorithm
         //it produces a 2D array of the given i j dimensions
         //and fills it with ID's ranging from 1 to the number of continents provided
 
         this.data = [];
         this.totalRegions = regions;
+        this.regionSourcesMax = 3;
+        this.regionSourcesMin = 1;
+        this.sourceSpreadMax = Math.floor(i / 5);
+        this.sourceSpreadMin = Math.floor(i / 10);
         this.width = i;
         this.height = j;
         this.noiseFactor = 5;
         this.smoothness = 3;
 
-        this.debug = false;
+        this.debug = debug;
 
         this.create2Darray();
     }
@@ -550,7 +557,7 @@ export class RegionGenerator {
         let startCells = this.pickStarts();
 
         for (let i = 0; i < startCells.length; i++) {
-            this.data[startCells[i][0]][startCells[i][1]] = i + 1; //+1 since 0 is null white
+            this.data[startCells[i].x][startCells[i].y] = startCells[i].region;
         }
 
         //assign according to nearest id, passing in start coordinates
@@ -561,48 +568,62 @@ export class RegionGenerator {
     }
 
     pickStarts() {
-        //pick starting positions, checking for overlap
+        let starts = [];
 
-        //create the starts array with the first index already done
-        let starts = [[Math.floor(Utils.rnd() * this.width), Math.floor(Utils.rnd() * this.height)]];
-
-        //loop from 1 (since first index is already set)
-        for (let n = 1; n < this.totalRegions; n++) {
-            //each time a new start is to be added per continent, loop through all existing starts
-            //to check if the new pair overlap, setting overlap to true and forcing the while loop
-            //to go over again, generating a new pair and checking the new pair for overlaps, etc.
-
-            //set to true initially so that the while loop runs at least once
-            let overlap = true;
-
-            while (overlap) {
-                //immediately reset the flag, no thanks infinite loop
-                overlap = false;
-
-                //generate new start coordinates
-                let x = Math.floor(Utils.rnd() * this.width);
-                let y = Math.floor(Utils.rnd() * this.height);
-
-                //loop through existing starts array
-                for (let i = 0; i < starts.length; i++) {
-                    if (x == starts[i][0] && y == starts[i][1]) {
-                        //if the x AND y match then there's a conflict so overlap is true
-                        overlap = true;
-                        if (this.debug) console.log("RegionGenerator: Overlap detected, retrying");
-                        //break for efficiency
-                        break;
-                    }
-                }
-
-                //if overlap is false after checking the array, add a new element of the coord pair to it
-                if (!overlap) {
-                    starts.push([x, y]);
-                }
-            }
+        //pick starting positions, checking for overlap, starting at 1 up to and including totalRegions
+        for (let r = 1; r <= this.totalRegions; r++) {
+            let totalRegionSources = Math.floor(Utils.rnd(this.regionSourcesMax + 1, this.regionSourcesMin));
+            let regionStarts = this.newStart(r, totalRegionSources);
+            starts = starts.concat(regionStarts);
         }
 
-        //return the coords
         return starts;
+    }
+
+    newStart(regionId, totalSources) {
+        //first source already done randomly
+        let starts = [{
+            x: Math.floor(Utils.rnd() * this.width),
+            y: Math.floor(Utils.rnd() * this.height),
+            region: regionId
+        }];
+
+        //add other sources within source spread radius
+        for (let n = 1; n < totalSources; n++) {
+            let spreadVector = func.getRandomVectorForce(this.sourceSpreadMax, this.sourceSpreadMin);
+
+            //wrap positions around if necessary
+            let x = Math.floor(spreadVector.x + starts[n-1].x);
+            if (x >= this.width) x -= this.width;
+            else if (x < 0) x += this.width;
+
+            let y = Math.floor(spreadVector.y + starts[n-1].y);
+            if (y >= this.height) y -= this.height
+            else if (y < 0) y += this.height;
+
+            starts[n] = {
+                x: x,
+                y: y,
+                region: regionId
+            };
+        }
+
+        return starts;
+    }
+
+    overlapFound(currStarts, newStart) {
+        //check each of the newStarts against all current Starts
+        for (let i = 0; i < currStarts.length; i++) {
+            let x = currStarts[i].x;
+            let y = currStarts[i].y;
+            if (x == newStart.x && y == newStart.y) {
+                //if the x AND y match then there's a conflict so overlap is true, return true
+                if (this.debug) console.log("RegionGenerator: Overlap detected, retrying");
+                return true;
+            }
+        }
+        //if you get to the end without return, no overlap
+        return false;
     }
 
     assignNearest(startCells) {
@@ -627,16 +648,38 @@ export class RegionGenerator {
         let nearestID = 0;
 
         for (let n = 0; n < startCells.length; n++) {
-            let startPositionX = startCells[n][0];
-            let startPositionY = startCells[n][1];
+            let startPositionX = startCells[n].x;
+            let startPositionY = startCells[n].y;
 
             // introduce some variation to the otherwise straight lines
             let noise = Utils.rnd(this.noiseFactor, -this.noiseFactor);
+
             let d0 = Utils.dist(i, j, startPositionX, startPositionY) + noise;
+            //check distances of startPositions adjusted left, right, up and down as well, as the "nearest" neighbour might be wrapped around
+            let dLeft = Utils.dist(i, j, startPositionX - this.width, startPositionY) + noise;
+            let dRight = Utils.dist(i, j, startPositionX + this.width, startPositionY) + noise;
+            let dUp = Utils.dist(i, j, startPositionX, startPositionY - this.height) + noise;
+            let dDown = Utils.dist(i, j, startPositionX, startPositionY + this.height) + noise;
 
             //set the ID to the ID of that start position
             if (d0 < shortest) {
                 shortest = d0;
+                nearestID = this.data[startPositionX][startPositionY];
+            }
+            if (dLeft < shortest) {
+                shortest = dLeft;
+                nearestID = this.data[startPositionX][startPositionY];
+            }
+            if (dRight < shortest) {
+                shortest = dRight;
+                nearestID = this.data[startPositionX][startPositionY];
+            }
+            if (dDown < shortest) {
+                shortest = dDown;
+                nearestID = this.data[startPositionX][startPositionY];
+            }
+            if (dUp < shortest) {
+                shortest = dUp;
                 nearestID = this.data[startPositionX][startPositionY];
             }
         }
@@ -713,8 +756,11 @@ export class RegionGenerator {
             let x = i + neighbourRefs[n][0];
             let y = j + neighbourRefs[n][1];
 
-            //for the edges do continue to ignore those cells
-            if (y < 0 || y >= this.height || x < 0 || x >= this.width) continue;
+            //for the edges, wrap around for nice blobby regions instead of pizza slices
+            if (y < 0) y = this.height - 1;
+            else if (y >= this.height) y = 0;
+            if (x < 0) x = this.width - 1;
+            else if (x >= this.width) x = 0;
 
             //and append the corresponding ID to the list
             neighbourIDs.push(this.data[x][y]);
@@ -735,6 +781,7 @@ class Tile {
         //geographic properties
         this.x = x;
         this.y = y;
+        this.region = 0;
         this.altVal = 50;
         this.tempVal = 50;
         this.wetVal = 50;
