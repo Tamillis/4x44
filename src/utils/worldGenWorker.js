@@ -30,6 +30,9 @@ function genGrid(grid) {
     self.postMessage({ message: worldGenerator.genCoastAndHills(grid) });
     self.postMessage({ message: worldGenerator.genInitialForests(grid) });
     self.postMessage({ message: worldGenerator.adjustForests(grid) });
+    self.postMessage({ message: worldGenerator.scatterGems(grid) });
+
+    if(!worldGenerator.checkReqs(grid)) grid = genGrid(grid);
 
     return grid;
 }

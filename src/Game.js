@@ -26,7 +26,21 @@ export class Engine {
         tile.active = tile.x == mx && tile.y == my;
       }
     }
+  }
 
-    //other events may set tiles to active, i/e to re-render
+  spawnPlayer(grid) {
+    let centre = Math.floor(grid.length / 2);
+    grid[centre][centre].entities.push(new Entity("scout", centre, centre));
+  }
+
+  //other events may set tiles to active, i/e to re-render
+
+}
+
+export class Entity {
+  constructor(type, x, y) {
+    this.type = type;
+    this.x = x;
+    this.y = y;
   }
 }

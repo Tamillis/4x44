@@ -422,6 +422,22 @@ export class WorldGenerator {
         return "Forests adjusted and finalised";
     }
 
+    scatterGems(grid) {
+        let gemTotal = 50;
+        let gems = 0;
+        while(gems < gemTotal) {
+            let i = Math.floor(Utils.rnd(grid.length));
+            let j = Math.floor(Utils.rnd(grid.length));
+
+            if(grid[i][j].altVal > this.alts.seaLevel && grid[i][j].altVal <= this.alts.highlandsLevel && grid[i][j].gems == false) {
+                grid[i][j].gems = true;
+                gems++;
+            }
+        }
+
+        return "Gems scattered.";
+    }
+
     genGrid(grid) {
 
 
@@ -469,10 +485,10 @@ export class WorldGenerator {
             hillRatio < this.reqs.minHillRatio ||
             hillRatio > this.reqs.maxHillRatio) {
             if (this.debug) console.warn("Regen-ing");
-            //grid = this.genGrid(grid);
+            return false;
         }
 
-        return grid;
+        return true;
     }
 
     assignForest(tile) {
@@ -797,5 +813,7 @@ class Tile {
         this.id = "x";
         this.active = true;
         this.discovered = true;
+        this.gems = false;
+        this.entities = [];
     }
 }

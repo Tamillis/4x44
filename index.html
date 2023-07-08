@@ -15,19 +15,31 @@
     }
 
     #main {
-      width: 100vw;
-      height: 100vh;
+      width: fit-content;
+      height: fit-content;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
+    }
+    
+    .bg {
       background: linear-gradient(#aa00ee, #00ee00);
+      height: 100vh;
+    }
+
+    .flex-row {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      gap: 2rem;
     }
   </style>
 
 </head>
 
-<body>
+<body class="flex-row bg">
   <main id="main">
     <form onsubmit="(e) => {
         e.preventDefault();
@@ -60,6 +72,12 @@
       <label for="landregion">Land Region</label>
     </div>
   </main>
+
+  <article>
+    <h2>Game Interface</h2>
+    <h3>Turn <span id="turn">0</span></h3>
+    <p><span id="currGemCount">0</span>/<span id="totalGemCount">50</span> Gems collected!</p>
+  </article>
 </body>
 
 </html>

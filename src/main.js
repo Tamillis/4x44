@@ -175,11 +175,12 @@ let game = (s) => {
         board.grid = e.data.grid;
         board.wind = e.data.wind;
         screen.rerender(board.grid);
+        engine.spawnPlayer(board.grid);
         worldGenerating = false;
       }
     });
 
-    worldGenWorker.postMessage({worldParams: worldParams, board:board, seed:Utils.seed, debug:debug});    
+    worldGenWorker.postMessage({worldParams: worldParams, board:board, seed:Utils.seed, debug:debug});
   }
 
   s.getMode = function() {

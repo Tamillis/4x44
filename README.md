@@ -7,9 +7,8 @@ For now it's just a fancy island generator.
 
 
 ### TODO List
- - Put WorldGeneration into a web-watcher with all current console-log messages instead being watcher event messages, so the whole site / app doesn't just freeze during the lengthy generation process, and users can actually get some feedback as to what is going on.
+ - Start a basic game loop - a little dude that you can order to move, cycle turns, try and collect as many gems as you can before 44 turns are up
  - Add region landmass counter, spawn minerals / resources according to above-sea landmass & region (so iron-rich region/s, copper-rich region/s, gold-silver-tin present regions)
- - Add a shallows water level for boat navigation & certain resources
 
 ### Commits
 <!-- `git log --date=format:'%Y-%m-%d' --pretty=format:'%ad %s'` -->

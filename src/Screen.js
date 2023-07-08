@@ -15,6 +15,9 @@ export class Screen {
     this.buffer = p5.createGraphics(p5.width, p5.height);
     this.mode = "geo";
     this.priorMode = "geo";
+  
+    this.sprites = new Image();   //TODO make this work when we shift from p5
+    this.sprites.src = "./assets/sprites.png";
 
     this.unknown = "#888";
     this.ocean = "#2B65EC";
@@ -58,7 +61,10 @@ export class Screen {
         buffer.rect(i * this.scale, j * this.scale, this.scale, this.scale);
 
         //below are special draw calls for geo mode only
-        if (this.mode == "geo") this.drawGeoFeatures(buffer, grid[x][y], i, j);
+        if (this.mode == "geo") {
+          this.drawGeoFeatures(grid[x][y], i, j);
+          this.drawEntities(grid[x][y].entities);
+        }
       }
     }
 
@@ -78,7 +84,8 @@ export class Screen {
     }
   }
 
-  drawGeoFeatures(buffer, tile, i, j) {   
+  drawGeoFeatures(tile, i, j) {
+    let buffer = this.buffer;   
     //draw hills line
     if (tile.hilly && tile.coastal !== "cliffs") {
       buffer.push();
@@ -115,6 +122,30 @@ export class Screen {
       buffer.stroke(this.river);
       buffer.point((i+0.5)*this.scale, (j+0.5)*this.scale);
       buffer.pop();
+    }
+
+    //draw gems 
+    if (tile.gems) {
+      buffer.push();
+      buffer.strokeWeight(8);
+      buffer.stroke("#E33661");
+      buffer.point((i+0.5)*this.scale, (j+0.5)*this.scale);
+      buffer.pop();
+    }
+  }
+
+  drawEntities(entities) {
+    for(let entity of entities) {
+      let {x, y} = this.boardToPxCoords(entity.x+0.5, entity.y+0.5);
+      switch(entity.type){
+        case "scout":
+          this.buffer.push();
+          this.buffer.fill("#FFF380");
+          this.buffer.stroke(0);
+          this.buffer.strokeWeight(1);
+          this.buffer.ellipse(x, y, this.scale*0.75, this.scale*0.75);
+          this.buffer.pop();
+      }
     }
   }
 
