@@ -1,8 +1,8 @@
-import {Screen} from "./Screen.js";
+import { Screen } from "./Screen.js";
 import { Board, Engine } from "./Game.js";
 import "./lib/p5.js";
 import "./utils/func.js";
-import {Utils} from "./utils/func.js";
+import { Utils } from "./utils/func.js";
 
 //can a simple web based 4x game be made that's finishable in 44 minutes? Let's call that 50 'turns'
 
@@ -39,40 +39,41 @@ let game = (s) => {
     document.getElementById("defaultCanvas0").oncontextmenu = (e) => false; //disables right click menu
 
     board = new Board(BOARDSIZE);
+    engine = new Engine(board.grid);
     s.resetBoard();
-    
+
     screen = new Screen(s, BOARDSCALES, BOARDSIZE);
     screen.checkBounds();
     screen.priorMode = s.getMode();
     screen.mode = s.getMode();
-
-    engine = new Engine();
   }
 
   s.draw = function () {
     document.getElementById("framerate").innerHTML = Math.floor(s.frameRate());
 
-    if(worldGenerating) {
-      s.background(255);
-      let w = latestMessage.length * 8;
-      s.fill(255);
-      s.rect(s.width/2 - w/2, s.height/2 - 10, w, 20);
-      s.fill(0);
-      s.textAlign(s.CENTER, s.CENTER);
-      s.text(latestMessage, s.width/2, s.height/2);
+    if (worldGenerating) {
+      s.drawLoadScreen();
       return;
     }
 
+    //refresh active tiles
     let mouseCoords = screen.pxToBoardCoords(s.mouseX, s.mouseY);
-    if(mouseCoords.x < 0 || mouseCoords.x >= BOARDSIZE || mouseCoords.y < 0 || mouseCoords.y >= BOARDSIZE) {}
-    else engine.setActiveTiles(board.grid, mouseCoords.x, mouseCoords.y);
+    if (mouseCoords.x < 0 || mouseCoords.x >= BOARDSIZE || mouseCoords.y < 0 || mouseCoords.y >= BOARDSIZE) { }
+    else {
+      if(engine.entityUpdated) {
+        engine.entityUpdated = false;
+        engine.revealTiles(board.grid);
+      }
+      engine.setActiveTiles(board.grid, mouseCoords.x, mouseCoords.y);
+    }
 
-    //draw grid
+    //draw grid & entities
     screen.mode = s.getMode();
-    if (screen.priorMode !== screen.mode) screen.rerender(board.grid);
-    else screen.draw(board.grid);
+
+    if (screen.priorMode !== screen.mode) screen.rerender(board.grid, engine.entities);
+    else screen.draw(board.grid, engine.entities);
     screen.priorMode = screen.mode;
-    
+
     debug = document.getElementById("debug").checked;
 
     //TODO put in screen class
@@ -81,6 +82,16 @@ let game = (s) => {
       s.loadDebugData(x, y);
       s.drawDebugBox();
     }
+  }
+
+  s.drawLoadScreen = function () {
+    s.background(255);
+    let w = latestMessage.length * 8;
+    s.fill(255);
+    s.rect(s.width / 2 - w / 2, s.height / 2 - 10, w, 20);
+    s.fill(0);
+    s.textAlign(s.CENTER, s.CENTER);
+    s.text(latestMessage, s.width / 2, s.height / 2);
   }
 
   s.loadDebugData = function (x, y) {
@@ -95,10 +106,11 @@ let game = (s) => {
     debugData.waterSource = board.grid[x][y].waterSource;
     debugData.river = board.grid[x][y].river;
     debugData.riverId = board.grid[x][y].riverId;
-    //debugData.forest = board.grid[x][y].forest;
-    //debugData.coastal = board.grid[x][y].coastal;
+    debugData.forest = board.grid[x][y].forest;
+    debugData.coastal = board.grid[x][y].coastal;
     debugData.region = board.grid[x][y].region;
     //debugData.hilly = board.grid[x][y].hilly;
+    //debugData.entities = board.grid[x][y].entities.length > 0 ? board.grid[x][y].entities.reduce((acc, curr) => acc += " " + curr.type, "") : "";
   }
 
   s.drawDebugBox = function () {
@@ -141,22 +153,26 @@ let game = (s) => {
   }
 
   s.keyPressed = function () {
+    //TODO create an inputHandler class that does all this itself
     if (s.key == "r") s.resetBoard();
+    else if (s.key == "f") {
+      board.discoverAll();
+      screen.rerender(board.grid, engine.entities);
+    }
     else if ([s.LEFT_ARROW, s.UP_ARROW, s.DOWN_ARROW, s.RIGHT_ARROW].includes(s.keyCode) || ["+", "-"].includes(s.key)) {
-      screen.keyPressed();
-      screen.rerender(board.grid);
+      screen.input();
+      screen.rerender(board.grid, engine.entities);
+    }
+    else if (["w","a","s","d"].includes(s.key)) {
+      engine.handleInput(s.key);
     }
   }
 
-  s.mousePressed = function (e) {
+  s.mousePressed = function () {
     if (s.mouseX < 0 || s.mouseX > s.width || s.mouseY < 0 || s.mouseY > s.height || worldGenerating) return;
-    else if (s.mouseButton === s.RIGHT) {
-      s.resetBoard();
-      screen.rerender(board.grid);
-    }
     else {
-      screen.mousePressed();
-      screen.rerender(board.grid)
+      screen.input();
+      screen.rerender(board.grid, engine.entities)
     }
   }
 
@@ -167,32 +183,36 @@ let game = (s) => {
     worldGenerating = true;
     latestMessage = "Generating";
 
-    worldGenWorker = new Worker("/src/utils/worldGenWorker.js", {type : "module"});
+    worldGenWorker = new Worker("/src/utils/worldGenWorker.js", { type: "module" });
+
     worldGenWorker.addEventListener("message", (e) => {
       latestMessage = e.data.message;
-      if(debug) console.log(latestMessage);
-      if(latestMessage == "Done") {
+      if (debug) console.log(latestMessage);
+      if (latestMessage == "Done") {
         board.grid = e.data.grid;
         board.wind = e.data.wind;
-        screen.rerender(board.grid);
-        engine.spawnPlayer(board.grid);
+        let player = engine.spawnPlayer(board.grid);
+        engine.revealTiles(board.grid, player.x, player.y);
+        screen.setScale(BOARDSCALES.length - 1);
+        screen.focus(engine.startPos.x, engine.startPos.y);
+        screen.rerender(board.grid, engine.entities);
         worldGenerating = false;
       }
     });
 
-    worldGenWorker.postMessage({worldParams: worldParams, board:board, seed:Utils.seed, debug:debug});
+    worldGenWorker.postMessage({ worldParams: worldParams, board: board, seed: Utils.seed, debug: debug });
   }
 
-  s.getMode = function() {
+  s.getMode = function () {
     let radioBtns = document.getElementsByName("mode");
     let mode = "geo";
 
     for (let btn of radioBtns) {
-        if (btn.checked) mode = btn.value;
+      if (btn.checked) mode = btn.value;
     }
 
     return mode;
-}
+  }
 }
 
 

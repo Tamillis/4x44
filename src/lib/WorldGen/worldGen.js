@@ -812,7 +812,7 @@ class Tile {
         //game engine properties
         this.id = "x";
         this.active = true;
-        this.discovered = true;
+        this.discovered = false;
         this.gems = false;
         this.entities = [];
     }

@@ -9,6 +9,8 @@ For now it's just a fancy island generator.
 ### TODO List
  - Start a basic game loop - a little dude that you can order to move, cycle turns, try and collect as many gems as you can before 44 turns are up
  - Add region landmass counter, spawn minerals / resources according to above-sea landmass & region (so iron-rich region/s, copper-rich region/s, gold-silver-tin present regions)
+ - Diversify tile types (highland forests vs lowland forests, coastal biomes (not just sand), hot desert, cold desert, tundra, mountain biomes? etc)
+ - Update world gen to be circular, start including the various stages and transitioning the world through those stages at on cue
 
 ### Commits
 <!-- `git log --date=format:'%Y-%m-%d' --pretty=format:'%ad %s'` -->

@@ -15,7 +15,7 @@ export class Screen {
     this.buffer = p5.createGraphics(p5.width, p5.height);
     this.mode = "geo";
     this.priorMode = "geo";
-  
+
     this.sprites = new Image();   //TODO make this work when we shift from p5
     this.sprites.src = "./assets/sprites.png";
 
@@ -31,9 +31,10 @@ export class Screen {
     this.river = "#00CAF1";
     this.snow = "#fffafa";
     this.jungle = "#29ab46";
+    this.void = "#212";
   }
 
-  draw(grid) {
+  draw(grid, entities) {
     //draw the cells passed in via the 2D grid
 
     //use a p5js createGraphics renderer object as an offscreen buffer
@@ -61,12 +62,13 @@ export class Screen {
         buffer.rect(i * this.scale, j * this.scale, this.scale, this.scale);
 
         //below are special draw calls for geo mode only
-        if (this.mode == "geo") {
+        if (this.mode == "geo" && grid[x][y].discovered) {
           this.drawGeoFeatures(grid[x][y], i, j);
-          this.drawEntities(grid[x][y].entities);
         }
       }
     }
+
+    this.drawEntities(entities);
 
     this.p5.image(buffer, 0, 0);
 
@@ -85,7 +87,7 @@ export class Screen {
   }
 
   drawGeoFeatures(tile, i, j) {
-    let buffer = this.buffer;   
+    let buffer = this.buffer;
     //draw hills line
     if (tile.hilly && tile.coastal !== "cliffs") {
       buffer.push();
@@ -120,7 +122,7 @@ export class Screen {
       buffer.push();
       buffer.strokeWeight(8);
       buffer.stroke(this.river);
-      buffer.point((i+0.5)*this.scale, (j+0.5)*this.scale);
+      buffer.point((i + 0.5) * this.scale, (j + 0.5) * this.scale);
       buffer.pop();
     }
 
@@ -129,33 +131,34 @@ export class Screen {
       buffer.push();
       buffer.strokeWeight(8);
       buffer.stroke("#E33661");
-      buffer.point((i+0.5)*this.scale, (j+0.5)*this.scale);
+      buffer.point((i + 0.5) * this.scale, (j + 0.5) * this.scale);
       buffer.pop();
     }
   }
 
   drawEntities(entities) {
-    for(let entity of entities) {
-      let {x, y} = this.boardToPxCoords(entity.x+0.5, entity.y+0.5);
-      switch(entity.type){
+    for (let entity of entities) {
+      let { x, y } = this.boardToPxCoords(entity.x + 0.5, entity.y + 0.5);
+      switch (entity.type) {
         case "scout":
           this.buffer.push();
           this.buffer.fill("#FFF380");
           this.buffer.stroke(0);
           this.buffer.strokeWeight(1);
-          this.buffer.ellipse(x, y, this.scale*0.75, this.scale*0.75);
+          this.buffer.ellipse(x, y, this.scale * 0.75, this.scale * 0.75);
           this.buffer.pop();
+          break;
       }
     }
   }
 
-  rerender(grid) {
+  rerender(grid, entities) {
     for (let i = 0; i < this.dims; i++) {
       for (let j = 0; j < this.dims; j++) {
         grid[i][j].active = true;
       }
     }
-    this.draw(grid);
+    this.draw(grid, entities);
   }
 
   getTileFill(tile) {
@@ -264,20 +267,27 @@ export class Screen {
     }
   }
 
-  keyPressed() {
+  input() {
     //handle movement interactions
     if (this.p5.keyCode === this.p5.LEFT_ARROW) this.x -= this.moveStep;
     else if (this.p5.keyCode === this.p5.UP_ARROW) this.y -= this.moveStep;
     else if (this.p5.keyCode === this.p5.DOWN_ARROW) this.y += this.moveStep;
     else if (this.p5.keyCode === this.p5.RIGHT_ARROW) this.x += this.moveStep;
-    else if (this.p5.key == "+") this.adjustScale(1);
-    else if (this.p5.key == "-") this.adjustScale(-1);
+    else if (this.p5.key == "+") this.adjustScaleAroundMouse(1);
+    else if (this.p5.key == "-") this.adjustScaleAroundMouse(-1);
+    else if (this.p5.mouseButton === this.p5.RIGHT) {
+      //left mouse button for movement. Centre tile
+
+      let { x, y } = this.pxToBoardCoords(this.p5.mouseX, this.p5.mouseY);
+      this.x = x - Math.floor(this.p5.width / 2 / this.scale);
+      this.y = y - Math.floor(this.p5.height / 2 / this.scale);
+    }
 
     //and correct camera position at edges
     this.checkBounds();
   }
 
-  adjustScale(step) {
+  adjustScaleAroundMouse(step) {
     //don't if at either end of the scales array
     if (this.scaleStep + step >= this.scales.length || this.scaleStep + step < 0) return;
 
@@ -297,15 +307,20 @@ export class Screen {
     this.border = this.scale * 4;
   }
 
-  mousePressed() {
-    if (this.p5.mouseButton === this.p5.LEFT) {
-      //left mouse button for movement. Centre tile
+  setScale(scaleStep) {
+    if (scaleStep >= this.scales.length) scaleStep = this.scales.length - 1;
 
-      let { x, y } = this.pxToBoardCoords(this.p5.mouseX, this.p5.mouseY);
-      this.x = x - Math.floor(this.p5.width / 2 / this.scale);
-      this.y = y - Math.floor(this.p5.height / 2 / this.scale);
-    }
-    this.checkBounds();
+    this.scaleStep = scaleStep;
+    this.scale = this.scales[scaleStep];
+  }
+
+  focus(x, y) {
+    //set
+    this.x = x;
+    this.y = y;
+    //adjust
+    this.x -= Math.floor(this.p5.width / this.scale / 2);
+    this.y -= Math.floor(this.p5.height / this.scale / 2);
   }
 
   checkBounds() {

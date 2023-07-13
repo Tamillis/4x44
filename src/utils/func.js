@@ -78,7 +78,7 @@ export class Utils {
     }
 
     static randomMember(arr) {
-        return arr[Math.floor(this.random(arr.length))];
+        return arr[Math.floor(this.random()*arr.length)];
     }
 
     static cyrb128(str) {
