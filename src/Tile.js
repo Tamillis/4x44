@@ -22,8 +22,6 @@ export default class Tile {
         this.id = "x";
         this.active = true;
         this.discovered = false;
-        this.gems = false;
-        this.entities = [];
         this.selected = false;
     }
 }

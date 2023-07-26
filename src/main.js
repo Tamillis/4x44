@@ -4,6 +4,7 @@ import "./lib/p5.js";
 import "./utils/func.js";
 import { Utils } from "./utils/func.js";
 import InputController from "./InputController.js";
+import UIController from "./UIController.js";
 
 //can a simple web based 4x game be made that's finishable in 44 minutes? Let's call that 50 'turns'
 
@@ -16,16 +17,20 @@ let game = (s) => {
   let debugData = {};
   let debug = false;
 
+  //game objects
+  let uiController;
   let inputController;
   let board;
   let screen;
   let engine;
-  let worldParams;
 
+  //world generation objects & variable
+  let worldParams;
   let worldGenWorker;
   let worldGenerating = false;
   let latestMessage = "P5 Loading";
 
+  //game constants
   const BOARDSIZE = 100;
   const SCREENSIZE = 600;
   const BOARDSCALES = [5, 10, 25, 50, 100];
@@ -51,6 +56,8 @@ let game = (s) => {
 
     inputController = new InputController(screen, board, engine);
     inputController.debug = debug;
+
+    uiController = new UIController();
   }
 
   s.draw = function () {
@@ -160,8 +167,13 @@ let game = (s) => {
 
   s.keyPressed = function () {
     //TODO remake resetBoard functionality in a way that makes it not awfully tightly knit to this p5 closure, probs when getting rid of p5
-    if (s.key == inputController.resetKey && debug) s.resetBoard();
-    else inputController.handleInput(s.key);
+    if (s.key == inputController.resetKey && debug) {
+      s.resetBoard();
+      return;
+    }
+    
+    inputController.handleInput(s.key);
+    uiController.update(engine.selectedEntities);
   }
 
   s.mousePressed = function () {
@@ -174,6 +186,7 @@ let game = (s) => {
       else if(s.mouseButton === s.RIGHT) keyCode = 2;
 
       inputController.handleInput(keyCode, true, s.mouseX, s.mouseY);
+      uiController.update(engine.selectedEntities);
     }
   }
 
@@ -190,9 +203,11 @@ let game = (s) => {
       latestMessage = e.data.message;
       if (debug) console.log(latestMessage);
       if (latestMessage == "Done") {
+        //setup the game, TODO put this somewhere more appropriate???
         board.grid = e.data.grid;
         board.wind = e.data.wind;
         let player = engine.spawnPlayer(board.grid);
+        engine.spawnGems(board.grid, worldParams.alts.seaLevel, worldParams.alts.highlandsLevel);
         engine.revealTiles(board.grid, player.x, player.y);
         screen.setScale(BOARDSCALES.length - 1);
         screen.focus(engine.startPos.x, engine.startPos.y);

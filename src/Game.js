@@ -77,15 +77,31 @@ export class Engine {
     this.startPos.x = startTile.x;
     this.startPos.y = startTile.y;
 
-    let scout = new Unit("scout", startTile.x, startTile.y, 3);
-    scout.vision = 4;
-    scout.selected = true;
+    let em = new EntityManager();
+    let scout = em.spawnEntity("scout", startTile.x, startTile.y);
 
     this.selectedEntity = scout;
     this.entities.push(scout);
 
     return { x: startTile.x, y: startTile.y };
   }
+
+  spawnGems(grid, lowerHeight, upperHeight) {
+    let gemTotal = 50;
+    let gems = 0;
+    while(gems < gemTotal) {
+        let i = Math.floor(Utils.rnd(grid.length));
+        let j = Math.floor(Utils.rnd(grid.length));
+
+        //try again if there is already a gem there
+        if(this.entities.reduce((acc,entity) => {acc = acc || (entity.x == i & entity.y == j)},false)) continue;
+
+        if(grid[i][j].altVal > lowerHeight && grid[i][j].altVal <= upperHeight) {
+            this.entities.push(new Feature("gem", i, j))
+            gems++;
+        }
+    }
+}
 
   revealTiles(grid, x = null, y = null) {
     //this whole system is suss and will probably change drastically
@@ -96,12 +112,14 @@ export class Engine {
 
     entities.forEach(e => {
       let visionRange = e.vision;
+      //give entities on hills 1 more vision
       if (grid[e.x][e.y].hilly) visionRange++;
       this.setDiscoveredTiles(grid, e.x, e.y, visionRange);
     });
   }
 
   setDiscoveredTiles(grid, x, y, visionRange, first = true) {
+    //if out of vision range or out of bounds, escape
     if (visionRange < 1 || x < 0 || y < 0 || x >= grid.length || y >= grid.length) return;
 
     grid[x][y].discovered = true;
@@ -125,19 +143,22 @@ export class Engine {
 
   select(grid, x, y) {
     if (this.priorTile == grid[x][y]) {
+      //clicked the already selected tile so need to toggle it
       grid[x][y].selected = !grid[x][y].selected;
+      //if unselecting empty selected Entities
       if (!grid[x][y].selected) this.selectedEntities = [];
-      else this.selectedEntities = this.getEntitiesAtTile(grid, x, y);
+      else this.updateSelection(grid, x, y);
     }
     else {
       grid[x][y].selected = true;
-      this.selectedEntities = this.getEntitiesAtTile(grid, x, y);
-
+      this.updateSelection(grid, x, y);
       if (this.priorTile) this.priorTile.selected = false;
       this.priorTile = grid[x][y];
     }
+  }
 
-    document.getElementById("selectedEntities").innerHTML = JSON.stringify(this.selectedEntities);
+  updateSelection(grid, x, y) {
+    if(grid[x][y].discovered) this.selectedEntities = this.getEntitiesAtTile(grid, x, y);
   }
 
   moveSelectedEntity(x, y) {
@@ -157,11 +178,6 @@ export class Engine {
 
   getEntitiesAtTile(grid, x, y) {
     let entities = [];
-    for (let i = 0; i < grid.length; i++) {
-      for (let j = 0; j < grid[i].length; j++) {
-        if (i == x && j == y) grid[i][j].entities.forEach(e=> entities.push(e));
-      }
-    }
 
     this.entities.forEach(e => {
       if(e.x == x && e.y == y) entities.push(e);
@@ -178,6 +194,7 @@ export class Entity {
     this.y = y;
     this.vision = 0;
     this.selected = false;
+    this.actions = [];
   }
 }
 
@@ -186,6 +203,7 @@ export class Unit extends Entity {
   constructor(type, x, y, mov = 0) {
     super(type, x, y);
     this.movement = mov;
+    
   }
 }
 
@@ -198,7 +216,15 @@ export class Feature extends Entity {
 
 export class EntityManager {
   spawnEntity(type, x, y) {
-    let newEntity = new Entity(type, x, y);
-
+    switch(type) {
+      case "scout":
+        let scout = new Unit("scout", x, y, 3);
+        scout.vision = 4;
+        scout.selected = true;
+        scout.actions = ["move", "attack", "investigate"];
+        return scout;
+      default:
+        throw new Error("Invalid entity type");
+    }
   }
 }

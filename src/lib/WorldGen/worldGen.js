@@ -423,32 +423,6 @@ export class WorldGenerator {
         return "Forests adjusted and finalised";
     }
 
-    scatterGems(grid) {
-        let gemTotal = 50;
-        let gems = 0;
-        while(gems < gemTotal) {
-            let i = Math.floor(Utils.rnd(grid.length));
-            let j = Math.floor(Utils.rnd(grid.length));
-
-            if(grid[i][j].altVal > this.alts.seaLevel && grid[i][j].altVal <= this.alts.highlandsLevel && grid[i][j].gems == false) {
-                grid[i][j].gems = true;
-                gems++;
-            }
-        }
-
-        return "Gems scattered.";
-    }
-
-    genGrid(grid) {
-
-
-        //TODO check world meets reqs at a stage-by-stage basis. Return values probably need a standardised DTO with grid, message and regenNeeded
-        console.log("checking reqs");
-        grid = this.checkReqs(grid);
-
-        return grid;
-    }
-
     scaleValues(grid, prop, newLow, newHigh) {
         let tallest = 0, shallowest = 0;
         for (let i = 0; i < this.BOARDSIZE; i++) {

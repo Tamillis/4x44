@@ -67,6 +67,7 @@ export class Screen {
         }
       }
     }
+    //selected cells need to have their border appear on top of everything else so it needs to come in its own loops after the main image is generated.
     for (let i = 0; i < this.p5.width / this.scale; i++) {
       for (let j = 0; j < this.p5.height / this.scale; j++) {
         let x = i + this.x;
@@ -86,13 +87,28 @@ export class Screen {
       }
     }
 
-    this.drawEntities(entities);
+    this.drawEntities(entities, grid);
 
     this.p5.image(buffer, 0, 0);
 
     //draw highlight border
     let { x, y } = this.pxToBoardCoords(this.p5.mouseX, this.p5.mouseY);
     this.drawHighlight(x, y, "#FF0000");
+  }
+
+  setTilesUnderEffect(grid, x, y, effectRange, first = true) {
+    //if out of range or out of bounds, escape
+    if (effectRange < 1 || x < 0 || y < 0 || x >= grid.length || y >= grid.length) return;
+
+    grid[x][y].effected = true;
+    this.activeTiles.push([x, y]);
+    let val = this.getObstruction(grid[x][y]);
+    if (!first) effectRange -= 1 + val;
+
+    this.setTilesUnderEffect(grid, x - 1, y, effectRange, false);
+    this.setTilesUnderEffect(grid, x + 1, y, effectRange, false);
+    this.setTilesUnderEffect(grid, x, y - 1, effectRange, false);
+    this.setTilesUnderEffect(grid, x, y + 1, effectRange, false);
   }
 
   drawHighlight(x, y, col) {
@@ -148,28 +164,32 @@ export class Screen {
       buffer.point((i + 0.5) * this.scale, (j + 0.5) * this.scale);
       buffer.pop();
     }
-
-    //draw gems 
-    if (tile.gems) {
-      buffer.push();
-      buffer.strokeWeight(8);
-      buffer.stroke("#E33661");
-      buffer.point((i + 0.5) * this.scale, (j + 0.5) * this.scale);
-      buffer.pop();
-    }
   }
 
-  drawEntities(entities) {
+  drawEntities(entities, grid) {
     for (let entity of entities) {
       let { x, y } = this.boardToPxCoords(entity.x + 0.5, entity.y + 0.5);
+
+      //don't render entities on hidden tiles
+      if(!grid[entity.x][entity.y].discovered) continue;
+
+      let buffer = this.buffer;
       switch (entity.type) {
         case "scout":
-          this.buffer.push();
-          this.buffer.fill("#FFF380");
-          this.buffer.stroke(0);
-          this.buffer.strokeWeight(1);
-          this.buffer.ellipse(x, y, this.scale * 0.75, this.scale * 0.75);
-          this.buffer.pop();
+          buffer.push();
+          buffer.fill("#FFF380");
+          buffer.stroke(0);
+          buffer.strokeWeight(1);
+          buffer.ellipse(x, y, this.scale * 0.75, this.scale * 0.75);
+          buffer.pop();
+          break;
+
+        case "gem":
+          buffer.push();
+          buffer.strokeWeight(this.scale / 3);
+          buffer.stroke("#E33661");
+          buffer.point(x, y);
+          buffer.pop();
           break;
       }
     }
