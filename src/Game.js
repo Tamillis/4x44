@@ -5,6 +5,7 @@
 // moving the AI agents at the end of a turn
 
 import { Utils } from "./utils/func.js";
+import Tile from "./Tile.js";
 
 //the game object that is the entire board, responsible for the 2x2 array of tiles and any properties true for the entire board, like wind
 export class Board {
@@ -30,10 +31,13 @@ export class Board {
 export class Engine {
   constructor() {
     this.startPos = { x: NaN, y: NaN };
-    this.selectedEntity = null;
     this.entities = [];
+    this.selectedEntity = null;
+    this.selectedEntities = [];
     this.activeTiles = [];
     this.entityUpdated = false;
+
+    this.priorTile = false;
   }
 
   setActiveTiles(grid, mx, my) {
@@ -46,7 +50,7 @@ export class Engine {
     }
 
     //set tiles in activeTiles list to active
-    for(let n = 0; n < this.activeTiles.length; n++) {
+    for (let n = 0; n < this.activeTiles.length; n++) {
       let x = this.activeTiles[n][0];
       let y = this.activeTiles[n][1];
       grid[x][y].active = true;
@@ -73,8 +77,9 @@ export class Engine {
     this.startPos.x = startTile.x;
     this.startPos.y = startTile.y;
 
-    let scout = new Entity("scout", startTile.x, startTile.y);
+    let scout = new Unit("scout", startTile.x, startTile.y, 3);
     scout.vision = 4;
+    scout.selected = true;
 
     this.selectedEntity = scout;
     this.entities.push(scout);
@@ -91,7 +96,7 @@ export class Engine {
 
     entities.forEach(e => {
       let visionRange = e.vision;
-      if(grid[e.x][e.y].hilly) visionRange++;
+      if (grid[e.x][e.y].hilly) visionRange++;
       this.setDiscoveredTiles(grid, e.x, e.y, visionRange);
     });
   }
@@ -100,7 +105,7 @@ export class Engine {
     if (visionRange < 1 || x < 0 || y < 0 || x >= grid.length || y >= grid.length) return;
 
     grid[x][y].discovered = true;
-    this.activeTiles.push([x,y]);
+    this.activeTiles.push([x, y]);
     let val = this.getObstruction(grid[x][y]);
     if (!first) visionRange -= 1 + val;
 
@@ -118,36 +123,51 @@ export class Engine {
     return val;
   }
 
-  handleInput(key) {
-    switch (key) {
-      case "w":
-        this.moveSelectedEntity(0, -1);
-        break;
-      case "a":
-        this.moveSelectedEntity(-1, 0);
-        break;
-      case "s":
-        this.moveSelectedEntity(0, 1);
-        break;
-      case "d":
-        this.moveSelectedEntity(1, 0);
-        break;
+  select(grid, x, y) {
+    if (this.priorTile == grid[x][y]) {
+      grid[x][y].selected = !grid[x][y].selected;
+      if (!grid[x][y].selected) this.selectedEntities = [];
+      else this.selectedEntities = this.getEntitiesAtTile(grid, x, y);
     }
+    else {
+      grid[x][y].selected = true;
+      this.selectedEntities = this.getEntitiesAtTile(grid, x, y);
+
+      if (this.priorTile) this.priorTile.selected = false;
+      this.priorTile = grid[x][y];
+    }
+
+    document.getElementById("selectedEntities").innerHTML = JSON.stringify(this.selectedEntities);
   }
 
   moveSelectedEntity(x, y) {
     //set old position to active
-    this.activeTiles.push([this.selectedEntity.x,this.selectedEntity.y]);
+    this.activeTiles.push([this.selectedEntity.x, this.selectedEntity.y]);
 
     //update its position
     this.selectedEntity.x += x;
     this.selectedEntity.y += y;
 
     //set new position to active
-    this.activeTiles.push([this.selectedEntity.x,this.selectedEntity.y]);
+    this.activeTiles.push([this.selectedEntity.x, this.selectedEntity.y]);
 
     //change engine state so external renderer can notice and update entities
     this.entityUpdated = true;
+  }
+
+  getEntitiesAtTile(grid, x, y) {
+    let entities = [];
+    for (let i = 0; i < grid.length; i++) {
+      for (let j = 0; j < grid[i].length; j++) {
+        if (i == x && j == y) grid[i][j].entities.forEach(e=> entities.push(e));
+      }
+    }
+
+    this.entities.forEach(e => {
+      if(e.x == x && e.y == y) entities.push(e);
+    });
+
+    return entities;
   }
 }
 
@@ -157,5 +177,28 @@ export class Entity {
     this.x = x;
     this.y = y;
     this.vision = 0;
+    this.selected = false;
+  }
+}
+
+export class Unit extends Entity {
+  //entities that are supposed to move around the board
+  constructor(type, x, y, mov = 0) {
+    super(type, x, y);
+    this.movement = mov;
+  }
+}
+
+export class Feature extends Entity {
+  //entities that are supposed to be static features or improvements of a tile
+  constructor(type, x, y) {
+    super(type, x, y);
+  }
+}
+
+export class EntityManager {
+  spawnEntity(type, x, y) {
+    let newEntity = new Entity(type, x, y);
+
   }
 }

@@ -67,6 +67,24 @@ export class Screen {
         }
       }
     }
+    for (let i = 0; i < this.p5.width / this.scale; i++) {
+      for (let j = 0; j < this.p5.height / this.scale; j++) {
+        let x = i + this.x;
+        let y = j + this.y;
+        if (x >= this.dims || x < 0 || y >= this.dims || y < 0) continue;
+        //draw selected borders
+        if (grid[x][y].selected) {
+          buffer.push();
+          buffer.fill(0, 0, 0, 0);
+          buffer.stroke("#FFFF00");
+          buffer.strokeWeight(Math.floor(this.scale / 10));
+          x -= this.x;
+          y -= this.y;
+          buffer.rect(x * this.scale, y * this.scale, this.scale, this.scale);
+          buffer.pop();
+        }
+      }
+    }
 
     this.drawEntities(entities);
 
@@ -74,11 +92,16 @@ export class Screen {
 
     //draw highlight border
     let { x, y } = this.pxToBoardCoords(this.p5.mouseX, this.p5.mouseY);
+    this.drawHighlight(x, y, "#FF0000");
+  }
+
+  drawHighlight(x, y, col) {
+    //draw highlight border
     if (!(x < 0 || x >= this.dims || y < 0 || y >= this.dims)) {
       this.p5.push();
       this.p5.fill(0, 0, 0, 0);
-      this.p5.stroke(255, 0, 0);
-      this.p5.strokeWeight(2);
+      this.p5.stroke(col);
+      this.p5.strokeWeight(Math.floor(this.scale / 15));
       x -= this.x;
       y -= this.y;
       this.p5.rect(x * this.scale, y * this.scale, this.scale, this.scale);
@@ -267,17 +290,16 @@ export class Screen {
     }
   }
 
-  input() {
-    //handle movement interactions
-    if (this.p5.keyCode === this.p5.LEFT_ARROW) this.x -= this.moveStep;
-    else if (this.p5.keyCode === this.p5.UP_ARROW) this.y -= this.moveStep;
-    else if (this.p5.keyCode === this.p5.DOWN_ARROW) this.y += this.moveStep;
-    else if (this.p5.keyCode === this.p5.RIGHT_ARROW) this.x += this.moveStep;
-    else if (this.p5.key == "+") this.adjustScaleAroundMouse(1);
-    else if (this.p5.key == "-") this.adjustScaleAroundMouse(-1);
-    else if (this.p5.mouseButton === this.p5.RIGHT) {
-      //left mouse button for movement. Centre tile
-
+  input(keyCode) {
+    //handle movement interactions for the camera
+    if (keyCode === "LEFT") this.x -= this.moveStep;
+    else if (keyCode === "UP") this.y -= this.moveStep;
+    else if (keyCode === "DOWN") this.y += this.moveStep;
+    else if (keyCode === "RIGHT") this.x += this.moveStep;
+    else if (keyCode === "+") this.adjustScaleAroundMouse(1);
+    else if (keyCode === "-") this.adjustScaleAroundMouse(-1);
+    else if (keyCode === "RMB") {
+      //right mouse button for movement. Centre tile
       let { x, y } = this.pxToBoardCoords(this.p5.mouseX, this.p5.mouseY);
       this.x = x - Math.floor(this.p5.width / 2 / this.scale);
       this.y = y - Math.floor(this.p5.height / 2 / this.scale);

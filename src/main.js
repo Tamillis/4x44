@@ -3,6 +3,7 @@ import { Board, Engine } from "./Game.js";
 import "./lib/p5.js";
 import "./utils/func.js";
 import { Utils } from "./utils/func.js";
+import InputController from "./InputController.js";
 
 //can a simple web based 4x game be made that's finishable in 44 minutes? Let's call that 50 'turns'
 
@@ -15,6 +16,7 @@ let game = (s) => {
   let debugData = {};
   let debug = false;
 
+  let inputController;
   let board;
   let screen;
   let engine;
@@ -46,6 +48,9 @@ let game = (s) => {
     screen.checkBounds();
     screen.priorMode = s.getMode();
     screen.mode = s.getMode();
+
+    inputController = new InputController(screen, board, engine);
+    inputController.debug = debug;
   }
 
   s.draw = function () {
@@ -75,6 +80,7 @@ let game = (s) => {
     screen.priorMode = screen.mode;
 
     debug = document.getElementById("debug").checked;
+    inputController.debug = debug;
 
     //TODO put in screen class
     let { x, y } = screen.pxToBoardCoords(s.mouseX, s.mouseY);
@@ -153,26 +159,21 @@ let game = (s) => {
   }
 
   s.keyPressed = function () {
-    //TODO create an inputHandler class that does all this itself
-    if (s.key == "r") s.resetBoard();
-    else if (s.key == "f") {
-      board.discoverAll();
-      screen.rerender(board.grid, engine.entities);
-    }
-    else if ([s.LEFT_ARROW, s.UP_ARROW, s.DOWN_ARROW, s.RIGHT_ARROW].includes(s.keyCode) || ["+", "-"].includes(s.key)) {
-      screen.input();
-      screen.rerender(board.grid, engine.entities);
-    }
-    else if (["w","a","s","d"].includes(s.key)) {
-      engine.handleInput(s.key);
-    }
+    //TODO remake resetBoard functionality in a way that makes it not awfully tightly knit to this p5 closure, probs when getting rid of p5
+    if (s.key == inputController.resetKey && debug) s.resetBoard();
+    else inputController.handleInput(s.key);
   }
 
   s.mousePressed = function () {
     if (s.mouseX < 0 || s.mouseX > s.width || s.mouseY < 0 || s.mouseY > s.height || worldGenerating) return;
     else {
-      screen.input();
-      screen.rerender(board.grid, engine.entities)
+      //just before I remove p5 this is a little conversion from p5 language back to Mozilla mouse button values
+      let keyCode = -1;
+      if(s.mouseButton === s.LEFT) keyCode = 0;
+      else if(s.mouseButton === s.CENTER) keyCode = 1;
+      else if(s.mouseButton === s.RIGHT) keyCode = 2;
+
+      inputController.handleInput(keyCode, true, s.mouseX, s.mouseY);
     }
   }
 
